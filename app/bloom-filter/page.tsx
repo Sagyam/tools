@@ -314,30 +314,6 @@ const BloomFilterDemo: React.FC = () => {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Bloom Filter Explanation */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>How Bloom Filter Works</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ul className="list-disc pl-5 space-y-2">
-                        <li>
-                            Uses the formula p = (1 - e^(-k*n/m))^k to calculate
-                            false positive probability
-                        </li>
-                        <li>k: Number of hash functions (3 in this demo)</li>
-                        <li>n: Number of inserted items</li>
-                        <li>
-                            m: Total bits in the bit array (100 in this demo)
-                        </li>
-                        <li>
-                            As more items are added, the false positive
-                            probability increases
-                        </li>
-                    </ul>
-                </CardContent>
-            </Card>
         </div>
     )
 }
