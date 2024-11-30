@@ -102,7 +102,7 @@ const generateGraphData = (
     m: number | null,
     k: number | null
 ) => {
-    const data = []
+    const data: any[] = []
 
     // Adjust range based on the parameter
     const range =
@@ -375,7 +375,9 @@ const BloomFilterCalculator: React.FC = () => {
                             />
                             <Tooltip
                                 formatter={(value) => [
-                                    formatProbability(value.toExponential(2)),
+                                    formatProbability(
+                                        parseFloat(value.toString())
+                                    ),
                                     'False Positive Rate',
                                 ]}
                             />
