@@ -354,24 +354,25 @@ const BloomFilterCalculator: React.FC = () => {
                     <ResponsiveContainer width="100%" height={400}>
                         <LineChart
                             data={graphData}
-                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 50 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis
                                 dataKey={selectedGraph.split('_')[2]}
                                 type="number"
-                                domain={['auto', 'auto']} // Explicitly set domain
+                                domain={['auto', 'auto']}
                                 scale="log"
                                 tickFormatter={formatLargeNumber}
-                                label={{
-                                    value: getXAxisLabel(selectedGraph),
-                                }}
+                                label={getXAxisLabel(selectedGraph)}
+                                dy={20}
                             />
                             <YAxis
                                 type="number"
                                 domain={['auto', 'auto']}
                                 scale="log"
                                 tickFormatter={formatProbability}
+                                width={90}
+                                dx={-10}
                             />
                             <Tooltip
                                 formatter={(value) => [
