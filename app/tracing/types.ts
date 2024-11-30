@@ -1,3 +1,9 @@
+export interface TraceSource {
+    url: string
+    name: string
+    language: string
+}
+
 export interface SyscallData {
     syscall: string
     percentage: number

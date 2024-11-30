@@ -1,4 +1,4 @@
-import { SyscallInfo } from './types'
+import { SyscallInfo } from '@/app/tracing/types'
 
 export const syscallInfo: SyscallInfo = {
     execve: 'Executes a program referenced by a pathname',

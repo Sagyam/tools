@@ -1,5 +1,8 @@
 'use client'
 
+import { BarDetails } from '@/app/tracing/bar-details'
+import { programData } from '@/app/tracing/data'
+import { ProgramData, SortOrder } from '@/app/tracing/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -9,86 +12,25 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { ArrowUpDown, X } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 import React, { useState } from 'react'
-import { BarDetails } from './bar-details'
-import { ProgramData, SortOrder } from './types'
 
 const getSyscallColor = (percentage: number): string => {
     if (percentage >= 50) {
-        return 'bg-red-400'
+        return 'bg-red-300'
     } else if (percentage >= 20) {
-        return 'bg-yellow-400'
+        return 'bg-amber-300'
     } else {
-        return 'bg-green-400'
+        return 'bg-green-300'
     }
 }
 
 export const SyscallDashboard: React.FC = () => {
-    const [selectedProgram, setSelectedProgram] = useState<ProgramData | null>(
-        null
+    const [selectedProgram, setSelectedProgram] = useState<ProgramData>(
+        programData[0]
     )
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
     const [languageFilter, setLanguageFilter] = useState('all')
-
-    const programData: ProgramData[] = [
-        {
-            name: 'c_gcc',
-            language: 'C (GCC)',
-            totalTime: 516,
-            syscalls: [
-                {
-                    syscall: 'execve',
-                    percentage: 45.74,
-                    calls: 1,
-                    time: 362,
-                    errors: 0,
-                },
-                {
-                    syscall: 'mmap',
-                    percentage: 17.44,
-                    calls: 8,
-                    time: 91,
-                    errors: 0,
-                },
-                {
-                    syscall: 'read',
-                    percentage: 12,
-                    calls: 2,
-                    time: 30,
-                    errors: 0,
-                },
-                {
-                    syscall: 'other',
-                    percentage: 24.82,
-                    calls: 2,
-                    time: 28,
-                    errors: 0,
-                },
-            ],
-        },
-        {
-            name: 'rust',
-            language: 'Rust',
-            totalTime: 600,
-            syscalls: [
-                {
-                    syscall: 'clone',
-                    percentage: 70.16,
-                    calls: 1,
-                    time: 362,
-                    errors: 0,
-                },
-                {
-                    syscall: 'read',
-                    percentage: 17.64,
-                    calls: 8,
-                    time: 91,
-                    errors: 0,
-                },
-            ],
-        },
-    ]
 
     const languages = Array.from(
         new Set(programData.map((prog) => prog.language))
@@ -110,6 +52,10 @@ export const SyscallDashboard: React.FC = () => {
     const scaleSteps = 5
     for (let i = 0; i <= scaleSteps; i++) {
         timeScaleMarkers.push(Math.round((maxTime / scaleSteps) * i))
+    }
+
+    if (programData.length === 0) {
+        return <div>Loading...</div>
     }
 
     return (
@@ -175,8 +121,21 @@ export const SyscallDashboard: React.FC = () => {
                                                 width: `${(syscall.time / program.totalTime) * 100}%`,
                                                 height: '100%',
                                             }}
-                                        />
+                                        >
+                                            <div className="absolute inset-0 flex items-center justify-center text-sm text-black font-bold">
+                                                {syscall.percentage > 5 &&
+                                                    syscall.percentage.toFixed(
+                                                        0
+                                                    )}
+                                                %
+                                            </div>
+                                        </div>
                                     ))}
+                                </div>
+
+                                {/* Total time label */}
+                                <div className="ml-2 text-sm font-medium">
+                                    {program.totalTime} µs
                                 </div>
                             </div>
                         ))}
@@ -188,7 +147,7 @@ export const SyscallDashboard: React.FC = () => {
                     <div className="flex justify-between text-xs text-gray-500">
                         {timeScaleMarkers.map((marker, index) => (
                             <div key={index} className="flex-1 text-center">
-                                {marker}
+                                {marker} µs
                             </div>
                         ))}
                     </div>
@@ -197,14 +156,6 @@ export const SyscallDashboard: React.FC = () => {
 
             {selectedProgram && (
                 <div className="relative">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute -top-2 -right-2 z-10"
-                        onClick={() => setSelectedProgram(null)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
                     <BarDetails
                         programName={selectedProgram.name}
                         totalExecutionTime={selectedProgram.totalTime}

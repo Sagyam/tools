@@ -1,9 +1,9 @@
-import { SyscallDashboard } from '@/app/posts/tracing/sys-call-dashboard'
+import BloomFilterCalculator from '@/app/bloom-calculator/bloom-filter-calculator'
 
 export default function Home() {
     return (
-        <main className="container mx-auto p-4">
-            <SyscallDashboard />
+        <main className="container mx-auto">
+            <BloomFilterCalculator />
         </main>
     )
 }

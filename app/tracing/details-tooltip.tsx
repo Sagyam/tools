@@ -1,6 +1,6 @@
+import { syscallInfo } from '@/app/tracing/syscall-info'
+import { TooltipProps } from '@/app/tracing/types'
 import React from 'react'
-import { syscallInfo } from './syscall-info'
-import { TooltipProps } from './types'
 
 export const DetailsTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
     if (active && payload && payload.length) {

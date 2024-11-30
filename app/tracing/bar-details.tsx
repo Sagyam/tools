@@ -1,3 +1,5 @@
+import { DetailsTooltip } from '@/app/tracing/details-tooltip'
+import { BarDetailsProps } from '@/app/tracing/types'
 import {
     Card,
     CardContent,
@@ -15,8 +17,6 @@ import {
     XAxis,
     YAxis,
 } from 'recharts'
-import { DetailsTooltip } from './details-tooltip'
-import { BarDetailsProps } from './types'
 
 export const BarDetails: React.FC<BarDetailsProps> = ({
     programName,
