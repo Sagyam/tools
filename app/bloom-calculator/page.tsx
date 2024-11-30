@@ -1,8 +1,8 @@
 import BloomFilterCalculator from '@/app/bloom-calculator/bloom-filter-calculator'
 
-export default function Home() {
+export default function Page() {
     return (
-        <main className="container mx-auto">
+        <main>
             <BloomFilterCalculator />
         </main>
     )

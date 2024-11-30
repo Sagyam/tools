@@ -385,7 +385,6 @@ const BloomFilterCalculator: React.FC = () => {
                             <Line
                                 type="monotone"
                                 dataKey="False Positive Rate"
-                                stroke="#000000"
                                 strokeWidth={2}
                                 dot={true}
                                 activeDot={{ r: 8 }}
