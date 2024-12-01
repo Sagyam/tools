@@ -20,7 +20,7 @@ class BloomFilter {
     private readonly hashFunctions: number
     private readonly bitArray: boolean[]
 
-    constructor({ size = 100, hashFunctions = 3 }: BloomFilterParams = {}) {
+    constructor({ size = 40, hashFunctions = 3 }: BloomFilterParams = {}) {
         this.size = size
         this.hashFunctions = hashFunctions
         this.bitArray = new Array(size).fill(false)
@@ -164,7 +164,7 @@ const BloomFilterDemo: React.FC = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto p-4 space-y-4">
+        <div className="max-w-2xl mx-auto space-y-2">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Bloom Filter Demonstration</CardTitle>
