@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { Check, Trash2, X } from 'lucide-react'
-import React, { useCallback, useState } from 'react'
+import { Check, Trash2, TriangleAlert } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 // Type definitions
 interface BloomFilterParams {
@@ -20,7 +20,7 @@ class BloomFilter {
     private readonly hashFunctions: number
     private readonly bitArray: boolean[]
 
-    constructor({ size = 40, hashFunctions = 3 }: BloomFilterParams = {}) {
+    constructor({ size = 40, hashFunctions = 5 }: BloomFilterParams = {}) {
         this.size = size
         this.hashFunctions = hashFunctions
         this.bitArray = new Array(size).fill(false)
@@ -73,14 +73,20 @@ class BloomFilter {
 }
 
 const BloomFilterDemo: React.FC = () => {
-    const [filterSize, setFilterSize] = useState<number>(100)
+    const [filterSize, setFilterSize] = useState<number>(30)
     const [hashFunctions, setHashFunctions] = useState<number>(3)
 
     const [bloomFilter, setBloomFilter] = useState<BloomFilter>(
         new BloomFilter({ size: filterSize, hashFunctions })
     )
     const [input, setInput] = useState<string>('')
-    const [addedItems, setAddedItems] = useState<string[]>([])
+    const [addedItems, setAddedItems] = useState<string[]>([
+        '42',
+        '69',
+        '420',
+        '1337',
+        '80085',
+    ])
     const [checkItem, setCheckItem] = useState<string>('')
     const [bitArray, setBitArray] = useState<boolean[]>(
         bloomFilter.getBitArray()
@@ -110,8 +116,13 @@ const BloomFilterDemo: React.FC = () => {
                 newBloomFilter.calculateFalseProbability(addedItems.length)
             setFalseProbability(newFalseProbability)
         },
+
         [addedItems, filterSize, hashFunctions]
     )
+
+    useEffect(() => {
+        recreateBloomFilter()
+    }, [])
 
     const handleAddItem = useCallback(() => {
         if (input.trim()) {
@@ -164,7 +175,7 @@ const BloomFilterDemo: React.FC = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-2">
+        <div className="max-w-2xl mx-auto">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Bloom Filter Demonstration</CardTitle>
@@ -277,40 +288,27 @@ const BloomFilterDemo: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         {checkResult ? (
-                                            <Check className="h-4 w-4 text-green-600" />
+                                            <TriangleAlert className="h-4 w-4 text-amber-500" />
                                         ) : (
-                                            <X className="h-4 w-4 text-red-600" />
+                                            <Check className="h-4 w-4 text-green-600" />
                                         )}
-                                        <span className="font-semibold">
+                                        <span className="font-semibold text-lg">
                                             {checkResult
-                                                ? 'Might Contain'
-                                                : 'Probably Does Not Contain'}
+                                                ? 'It maybe present'
+                                                : 'Definitely not present'}
                                         </span>
                                     </div>
                                 </div>
-                                <AlertDescription className="mt-2">
-                                    {checkResult
-                                        ? 'The item might be in the Bloom Filter (but could be a false positive)'
-                                        : 'The item is definitely not in the Bloom Filter'}
+                                <AlertDescription className="mt-2 text-md">
+                                    {falseProbability > 1 &&
+                                        checkResult &&
+                                        `There is a ${falseProbability.toFixed(1)}% chance I could be wrong. `}
+                                    {falseProbability > 1 &&
+                                        ` As you can see above, I am kinda full right now 😫 and I make mistakes when that happens.
+                                            Now if you move that Filter Size ☝️ slider to right ➡ I can be more accurate 🎯`}
                                 </AlertDescription>
                             </div>
                         )}
-
-                        {/* Bloom Filter Statistics */}
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-2">
-                                Bloom Filter Statistics
-                            </h3>
-                            <div className="space-y-2">
-                                <p>Total Items Added: {addedItems.length}</p>
-                                <p>Filter Size: {filterSize}</p>
-                                <p>Hash Functions: {hashFunctions}</p>
-                                <p>
-                                    False Positive Probability:{' '}
-                                    {falseProbability.toFixed(4)}%
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </CardContent>
             </Card>

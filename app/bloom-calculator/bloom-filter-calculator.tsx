@@ -110,7 +110,7 @@ const generateGraphData = (
             ? [10, 100, 1000, 10000, 100000]
             : param === 'm'
               ? [1000, 10000, 100000, 1000000, 10000000]
-              : [1, 2, 3, 4, 5, 6, 7, 8, 9]
+              : [...Array(50).keys()]
 
     range.forEach((value) => {
         let currentN = n,
@@ -209,7 +209,7 @@ const BloomFilterCalculator: React.FC = () => {
     }
 
     return (
-        <Card className="w-full max-w-4xl mx-auto">
+        <Card className="w-full max-w-4xl mx-auto ">
             <CardHeader>
                 <CardTitle>Bloom Filter Calculator</CardTitle>
             </CardHeader>
