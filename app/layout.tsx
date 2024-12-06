@@ -1,8 +1,11 @@
+import { AppSidebar } from '@/components/app-sidebar'
 import { ModeToggle } from '@/components/mode-toggle'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
+import { cookies } from 'next/headers'
 
 const geistSans = localFont({
     src: './fonts/GeistVF.woff',
@@ -20,25 +23,31 @@ export const metadata: Metadata = {
     description: 'Tools for your application',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode
 }>) {
+    const cookieStore = cookies()
+    const defaultOpen = cookieStore.get('sidebar:state')?.value === 'true'
     return (
         <html lang="en" suppressHydrationWarning>
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <ModeToggle></ModeToggle>
-                <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                >
-                    {children}
-                </ThemeProvider>
+                <SidebarProvider defaultOpen={defaultOpen}>
+                    <AppSidebar />
+                    <ModeToggle></ModeToggle>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        <SidebarTrigger />
+                        {children}
+                    </ThemeProvider>
+                </SidebarProvider>
             </body>
         </html>
     )

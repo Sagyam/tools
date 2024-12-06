@@ -175,144 +175,140 @@ const BloomFilterDemo: React.FC = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Bloom Filter Demonstration</CardTitle>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleClearAll}
-                        className="flex items-center gap-2"
-                    >
-                        <Trash2 className="h-4 w-4" /> Clear All
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {/* Filter Configuration Sliders */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Filter Size: {filterSize}</Label>
-                                <Slider
-                                    defaultValue={[filterSize]}
-                                    min={10}
-                                    max={100}
-                                    step={10}
-                                    onValueChange={(value) => {
-                                        setFilterSize(value[0])
-                                        recreateBloomFilter(value[0])
-                                    }}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Hash Functions: {hashFunctions}</Label>
-                                <Slider
-                                    defaultValue={[hashFunctions]}
-                                    min={1}
-                                    max={10}
-                                    step={1}
-                                    onValueChange={(value) => {
-                                        setHashFunctions(value[0])
-                                        recreateBloomFilter(undefined, value[0])
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        {/* Add Item Section */}
-                        <div className="flex space-x-2">
-                            <Input
-                                placeholder="Enter item to add to Bloom Filter"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                className="flex-grow"
+        <Card className="max-w-4xl mx-auto my-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Bloom Filter Demonstration</CardTitle>
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleClearAll}
+                    className="flex items-center gap-2"
+                >
+                    <Trash2 className="h-4 w-4" /> Clear All
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {/* Filter Configuration Sliders */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Filter Size: {filterSize}</Label>
+                            <Slider
+                                defaultValue={[filterSize]}
+                                min={10}
+                                max={100}
+                                step={10}
+                                onValueChange={(value) => {
+                                    setFilterSize(value[0])
+                                    recreateBloomFilter(value[0])
+                                }}
                             />
-                            <Button onClick={handleAddItem}>Add Item</Button>
                         </div>
-
-                        {/* Added Items Display */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">
-                                Added Items:
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {addedItems.map((item, index) => (
-                                    <span
-                                        key={index}
-                                        className="bg-accent px-2 py-1 rounded text-sm"
-                                    >
-                                        {item}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                        {/* Bit Array Visualization */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-2">
-                                Bloom Filter Bit Array:
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {bitArray.map((bit, index) => (
-                                    <div
-                                        key={index}
-                                        className={`w-6 h-6 rounded flex items-center justify-center border ${
-                                            bit
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-gray-100 dark:bg-gray-700'
-                                        }`}
-                                    >
-                                        {bit ? '1' : '0'}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Check Item Section */}
-                        <div className="flex space-x-2">
-                            <Input
-                                placeholder="Enter item to check"
-                                value={checkItem}
-                                onChange={(e) => setCheckItem(e.target.value)}
-                                className="flex-grow"
+                        <div className="space-y-2">
+                            <Label>Hash Functions: {hashFunctions}</Label>
+                            <Slider
+                                defaultValue={[hashFunctions]}
+                                min={1}
+                                max={10}
+                                step={1}
+                                onValueChange={(value) => {
+                                    setHashFunctions(value[0])
+                                    recreateBloomFilter(undefined, value[0])
+                                }}
                             />
-                            <Button onClick={handleCheckItem}>
-                                Check Item
-                            </Button>
                         </div>
-
-                        {/* Check Result and False Probability */}
-                        {checkResult !== null && (
-                            <div
-                                className={`p-4 rounded-lg border ${getConfidenceColor()}`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        {checkResult ? (
-                                            <TriangleAlert className="h-4 w-4 text-amber-500" />
-                                        ) : (
-                                            <Check className="h-4 w-4 text-green-600" />
-                                        )}
-                                        <span className="font-semibold text-lg">
-                                            {checkResult
-                                                ? 'It maybe present'
-                                                : 'Definitely not present'}
-                                        </span>
-                                    </div>
-                                </div>
-                                <AlertDescription className="mt-2 text-md">
-                                    {falseProbability > 1 &&
-                                        checkResult &&
-                                        `There is a ${falseProbability.toFixed(1)}% chance I could be wrong. `}
-                                    {falseProbability > 1 &&
-                                        ` As you can see above, I am kinda full right now 😫 and I make mistakes when that happens.
-                                            Now if you move that Filter Size ☝️ slider to right ➡ I can be more accurate 🎯`}
-                                </AlertDescription>
-                            </div>
-                        )}
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                    {/* Add Item Section */}
+                    <div className="flex space-x-2">
+                        <Input
+                            placeholder="Enter item to add to Bloom Filter"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            className="flex-grow"
+                        />
+                        <Button onClick={handleAddItem}>Add Item</Button>
+                    </div>
+
+                    {/* Added Items Display */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                            Added Items:
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                            {addedItems.map((item, index) => (
+                                <span
+                                    key={index}
+                                    className="bg-accent px-2 py-1 rounded text-sm"
+                                >
+                                    {item}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                    {/* Bit Array Visualization */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                            Bloom Filter Bit Array:
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                            {bitArray.map((bit, index) => (
+                                <div
+                                    key={index}
+                                    className={`w-6 h-6 rounded flex items-center justify-center border ${
+                                        bit
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-700'
+                                    }`}
+                                >
+                                    {bit ? '1' : '0'}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Check Item Section */}
+                    <div className="flex space-x-2">
+                        <Input
+                            placeholder="Enter item to check"
+                            value={checkItem}
+                            onChange={(e) => setCheckItem(e.target.value)}
+                            className="flex-grow"
+                        />
+                        <Button onClick={handleCheckItem}>Check Item</Button>
+                    </div>
+
+                    {/* Check Result and False Probability */}
+                    {checkResult !== null && (
+                        <div
+                            className={`p-4 rounded-lg border ${getConfidenceColor()}`}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    {checkResult ? (
+                                        <TriangleAlert className="h-4 w-4 text-amber-500" />
+                                    ) : (
+                                        <Check className="h-4 w-4 text-green-600" />
+                                    )}
+                                    <span className="font-semibold text-lg">
+                                        {checkResult
+                                            ? 'It maybe present'
+                                            : 'Definitely not present'}
+                                    </span>
+                                </div>
+                            </div>
+                            <AlertDescription className="mt-2 text-md">
+                                {falseProbability > 1 &&
+                                    checkResult &&
+                                    `There is a ${falseProbability.toFixed(1)}% chance I could be wrong. `}
+                                {falseProbability > 1 &&
+                                    ` As you can see above, I am kinda full right now 😫 and I make mistakes when that happens.
+                                            Now if you move that Filter Size ☝️ slider to right ➡ I can be more accurate 🎯`}
+                            </AlertDescription>
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
     )
 }
 

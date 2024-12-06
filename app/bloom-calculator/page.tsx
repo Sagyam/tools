@@ -1,9 +1,5 @@
 import BloomFilterCalculator from '@/app/bloom-calculator/bloom-filter-calculator'
 
 export default function Page() {
-    return (
-        <main>
-            <BloomFilterCalculator />
-        </main>
-    )
+    return <BloomFilterCalculator />
 }

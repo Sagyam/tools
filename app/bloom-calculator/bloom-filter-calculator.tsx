@@ -209,7 +209,7 @@ const BloomFilterCalculator: React.FC = () => {
     }
 
     return (
-        <Card className="w-full max-w-4xl mx-auto ">
+        <Card className="w-full max-w-4xl mx-auto my-auto">
             <CardHeader>
                 <CardTitle>Bloom Filter Calculator</CardTitle>
             </CardHeader>
