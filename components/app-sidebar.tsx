@@ -8,12 +8,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import {
-    CalculatorIcon,
-    FilterIcon,
-    ScaleIcon,
-    TelescopeIcon,
-} from 'lucide-react'
+import { CalculatorIcon, FilterIcon, TelescopeIcon } from 'lucide-react'
 
 // Menu items.
 const items = [
@@ -27,11 +22,7 @@ const items = [
         url: '/bloom-filter',
         icon: FilterIcon,
     },
-    {
-        title: 'Load Balancer',
-        url: '/load-balancer',
-        icon: ScaleIcon,
-    },
+
     {
         title: 'Traciang',
         url: '/tracing',

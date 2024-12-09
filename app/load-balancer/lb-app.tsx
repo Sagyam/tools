@@ -5,7 +5,8 @@ import LoadBalancerGraphs from '@/app/load-balancer/graph'
 import '@xyflow/react/dist/style.css'
 import LoadBalancerLogic from '@/app/load-balancer/lb-logic'
 import LoadBalancerSimulation from '@/app/load-balancer/simualtion'
-import React, { useEffect, useState } from 'react'
+import { SimulationMetrics } from '@/app/load-balancer/types'
+import React, { useCallback, useEffect, useState } from 'react'
 
 const LOAD_BALANCING_ALGORITHMS = [
     'Round Robin',
@@ -15,17 +16,6 @@ const LOAD_BALANCING_ALGORITHMS = [
     'IP Hash',
 ]
 
-export interface Metric {
-    time: number
-    value: number
-}
-
-export interface SimulationMetrics {
-    requestsServed: Metric[]
-    requestsDropped: Metric[]
-    avgTurnAroundTime: Metric[]
-}
-
 const LoadBalancerSimulator = () => {
     const [algorithm, setAlgorithm] = useState<string>(
         LOAD_BALANCING_ALGORITHMS[0]
@@ -33,31 +23,43 @@ const LoadBalancerSimulator = () => {
     const [clientCount, setClientCount] = useState<number>(3)
     const [serverCount, setServerCount] = useState<number>(3)
     const [rpsVariance, setRpsVariance] = useState<number>(2)
-    const [requestCostVariance, setRequestCostVariance] = useState<number>(0.5)
+    const [requestCostVariance, setRequestCostVariance] = useState<number>(0.1)
     const [metrics, setMetrics] = useState<SimulationMetrics>({
         requestsServed: [],
         requestsDropped: [],
         avgTurnAroundTime: [],
     })
 
-    const runSimulation = () => {
+    const runSimulation = useCallback(() => {
         const simulationConfig = {
             algorithm,
             clientCount,
             serverCount,
             rpsVariance,
             requestCostVariance,
-            simulationDuration: 1000 * 2,
         }
 
-        const newMetrics = LoadBalancerLogic.simulate(simulationConfig)
+        const newMetrics = LoadBalancerLogic.simulate(simulationConfig, metrics)
         setMetrics(newMetrics)
-    }
+        console.debug(newMetrics.requestsServed[0])
+        console.debug(newMetrics.requestsDropped[0])
+        console.debug(newMetrics.avgTurnAroundTime[0])
+    }, [
+        algorithm,
+        clientCount,
+        serverCount,
+        rpsVariance,
+        requestCostVariance,
+        metrics,
+    ])
 
     useEffect(() => {
-        runSimulation()
-        console.debug(metrics)
-    }, [algorithm, clientCount, serverCount, rpsVariance, requestCostVariance])
+        // Set up continuous simulation with interval
+        const simulationInterval = setInterval(runSimulation, 100)
+
+        // Cleanup interval on component unmount
+        return () => clearInterval(simulationInterval)
+    }, [runSimulation])
 
     return (
         <div className="max-w-5xl mx-auto my-auto flex gap-x-8">

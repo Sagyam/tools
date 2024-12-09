@@ -26,6 +26,7 @@
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
     "next-themes": "^0.4.3",
+    "random": "^5.1.1",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.13.3",

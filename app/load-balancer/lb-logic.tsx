@@ -1,26 +1,10 @@
-// Server representation
-import { SimulationMetrics } from '@/app/load-balancer/lb-app'
-
-interface Server {
-    id: number
-    currentConnections: number
-    totalResponseTime: number
-    requestsServed: number
-}
-
-// Simulation Configuration
-interface SimulationConfig {
-    algorithm: string
-    clientCount: number
-    serverCount: number
-    rpsVariance: number
-    requestCostVariance: number
-    simulationDuration: number
-}
+import random from 'random'
+import { Server, SimulationConfig, SimulationMetrics } from './types'
 
 class LoadBalancerLogic {
-    private servers: Server[]
+    private readonly servers: Server[]
     private config: SimulationConfig
+    private time: number = 0
 
     constructor(config: SimulationConfig) {
         this.config = config
@@ -32,114 +16,113 @@ class LoadBalancerLogic {
         }))
     }
 
-    // Static method to create and run simulation
-    static simulate(config: SimulationConfig): SimulationMetrics {
+    // Static method to create and run simulation step
+    static simulate(
+        config: SimulationConfig,
+        previousMetrics?: SimulationMetrics
+    ): SimulationMetrics {
         const simulator = new LoadBalancerLogic(config)
-        return simulator.runSimulation()
+        return simulator.runSimulationStep(previousMetrics)
     }
 
-    // Main simulation method
-    runSimulation(): SimulationMetrics {
-        const metrics: SimulationMetrics = {
+    // Continuous simulation step method
+    runSimulationStep(previousMetrics?: SimulationMetrics): SimulationMetrics {
+        const metrics: SimulationMetrics = previousMetrics || {
             requestsServed: [],
             requestsDropped: [],
             avgTurnAroundTime: [],
         }
 
-        let totalRequestsServed = 0
-        let totalRequestsDropped = 0
+        // Use Poisson distribution for request generation
+        const requestCount = random.poisson(this.config.clientCount)()
+
+        let servedRequests = 0
+        let droppedRequests = 0
         let totalTurnAroundTime = 0
+        let totalRequestsServed = metrics.requestsServed.reduce(
+            (sum, metric) => sum + metric.value,
+            0
+        )
 
-        for (let time = 0; time < this.config.simulationDuration; time++) {
-            // Generate requests based on Poisson-like distribution
-            const requestCount = Math.round(
-                this.generateGaussianRandom(
-                    this.config.clientCount,
-                    this.config.rpsVariance
-                )
-            )
+        // Process each request
+        for (let i = 0; i < requestCount; i++) {
+            // Use Normal distribution for request cost
+            const requestCost = random.normal(
+                100,
+                this.config.requestCostVariance
+            )()
 
-            let servedRequests = 0
-            let droppedRequests = 0
-
-            // Process each request
-            for (let i = 0; i < requestCount; i++) {
-                // Generate request cost with variance
-                const requestCost = this.generateGaussianRandom(
-                    1,
-                    this.config.requestCostVariance
-                )
-
-                // Select server based on algorithm
-                let selectedServer: Server
-                switch (this.config.algorithm) {
-                    case 'Round Robin':
-                        selectedServer = this.selectServerRoundRobin(time)
-                        break
-                    case 'Least Connections':
-                        selectedServer = this.selectServerLeastConnections()
-                        break
-                    case 'Weighted Random':
-                        selectedServer = this.selectServerWeightedRandom()
-                        break
-                    case 'Least Response Time':
-                        selectedServer = this.selectServerLeastResponseTime()
-                        break
-                    default:
-                        selectedServer = this.servers[0]
-                }
-
-                // Check if server can handle the request
-                if (
-                    selectedServer.currentConnections < this.config.serverCount
-                ) {
-                    // Process request
-                    selectedServer.currentConnections++
-                    selectedServer.requestsServed++
-                    selectedServer.totalResponseTime += requestCost
-
-                    // Simulate request processing
-                    setTimeout(() => {
-                        selectedServer.currentConnections--
-                    }, requestCost * 100) // Simulated processing time
-
-                    servedRequests++
-                    totalRequestsServed++
-                    totalTurnAroundTime += requestCost
-                } else {
-                    // Request dropped
-                    droppedRequests++
-                    totalRequestsDropped++
-                }
+            // Select server based on algorithm
+            let selectedServer: Server
+            switch (this.config.algorithm) {
+                case 'Round Robin':
+                    selectedServer = this.selectServerRoundRobin(this.time)
+                    break
+                case 'Least Connections':
+                    selectedServer = this.selectServerLeastConnections()
+                    break
+                case 'Weighted Random':
+                    selectedServer = this.selectServerWeightedRandom()
+                    break
+                case 'Least Response Time':
+                    selectedServer = this.selectServerLeastResponseTime()
+                    break
+                default:
+                    selectedServer = this.servers[0]
             }
 
-            // Record metrics for this time step
-            metrics.requestsServed.push({
-                time,
-                value: servedRequests,
-            })
-            metrics.requestsDropped.push({
-                time,
-                value: droppedRequests,
-            })
-            metrics.avgTurnAroundTime.push({
-                time,
-                value: totalTurnAroundTime / (totalRequestsServed || 1),
-            })
+            // Check if server can handle the request
+            if (selectedServer.currentConnections < this.config.serverCount) {
+                // Process request
+                selectedServer.currentConnections++
+                selectedServer.requestsServed++
+                selectedServer.totalResponseTime += requestCost
+
+                // Simulate request processing
+                setTimeout(() => {
+                    selectedServer.currentConnections--
+                }, requestCost * 100)
+
+                servedRequests++
+                totalRequestsServed++
+                totalTurnAroundTime += requestCost
+            } else {
+                // Request dropped
+                droppedRequests++
+            }
         }
+
+        // Manage metrics array size (keep last 100)
+        const updateMetricArray = (arr: { time: number; value: number }[]) => {
+            arr.push({
+                time: this.time,
+                value:
+                    arr === metrics.requestsServed
+                        ? servedRequests
+                        : droppedRequests,
+            })
+            return arr.slice(-100)
+        }
+
+        metrics.requestsServed = updateMetricArray(metrics.requestsServed)
+        metrics.requestsDropped = updateMetricArray(metrics.requestsDropped)
+
+        // Calculate and update average turn-around time
+        metrics.avgTurnAroundTime.push({
+            time: this.time,
+            value:
+                totalRequestsServed > 0
+                    ? totalTurnAroundTime / totalRequestsServed
+                    : 0,
+        })
+        metrics.avgTurnAroundTime = metrics.avgTurnAroundTime.slice(-100)
+
+        this.time++
 
         return metrics
     }
 
-    // Gaussian random generation (same as in original component)
-    private generateGaussianRandom(mean: number, stdDev: number): number {
-        const u1 = Math.random()
-        const u2 = Math.random()
-        const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2)
-        return Math.max(0, mean + z0 * stdDev)
-    }
-
-    // Load balancing algorithms
+    // Existing server selection methods remain the same
     private selectServerRoundRobin(currentTime: number): Server {
         return this.servers[currentTime % this.servers.length]
     }
@@ -167,7 +150,7 @@ class LoadBalancerLogic {
             }
         }
 
-        return this.servers[0] // Fallback
+        return this.servers[0]
     }
 
     private selectServerLeastResponseTime(): Server {
