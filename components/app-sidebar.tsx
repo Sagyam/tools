@@ -8,7 +8,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { CalculatorIcon, FilterIcon, TelescopeIcon } from 'lucide-react'
+import {
+    CalculatorIcon,
+    FilterIcon,
+    SuperscriptIcon,
+    TelescopeIcon,
+} from 'lucide-react'
 
 // Menu items.
 const items = [
@@ -21,6 +26,11 @@ const items = [
         title: 'Bloom Filter',
         url: '/bloom-filter',
         icon: FilterIcon,
+    },
+    {
+        title: 'HyperLogLog',
+        url: '/hyperloglog',
+        icon: SuperscriptIcon,
     },
 
     {

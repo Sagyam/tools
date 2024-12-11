@@ -2,6 +2,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { ModeToggle } from '@/components/mode-toggle'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
@@ -47,6 +48,7 @@ export default async function RootLayout({
                     >
                         <SidebarTrigger />
                         {children}
+                        <Toaster />
                     </ThemeProvider>
                 </SidebarProvider>
             </body>
