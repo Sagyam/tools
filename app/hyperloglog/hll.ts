@@ -6,6 +6,7 @@ export class HyperLogLog {
     m: number
     alpha: number
     stdError: number
+    age: 'Immature' | 'Prime' | 'Exhausted'
     warningMessage: string
 
     constructor(buckets: number) {
@@ -14,6 +15,7 @@ export class HyperLogLog {
         this.lastAddedBucket = -1
         this.alpha = this.calculateAlpha(this.m)
         this.stdError = this.calculateStdError()
+        this.age = 'Immature'
         this.warningMessage = ''
     }
 
@@ -68,14 +70,26 @@ export class HyperLogLog {
         )
         const estimate = (this.alpha * this.m * this.m) / sumBuckets
 
+        this.age = 'Prime'
+
         // Small range correction
         if (estimate <= 2.5 * this.m) {
+            this.age = 'Immature'
             const zeroBuckets = this.buckets.filter(
                 (val: number) => val === 0
             ).length
             return zeroBuckets > 0
                 ? Math.round(this.m * Math.log(this.m / zeroBuckets))
                 : Math.round(estimate)
+        }
+
+        // Large range correction (when estimate > 2^32 / 30)
+        const threshold = Math.pow(2, 32) / 30
+        if (estimate > threshold) {
+            this.age = 'Exhausted'
+            return Math.round(
+                -Math.pow(2, 32) * Math.log(1 - estimate / Math.pow(2, 32))
+            )
         }
 
         return Math.round(estimate)
@@ -96,13 +110,13 @@ export class HyperLogLog {
         }
     }
 
-    calculateDelta(groundTruth: number): number {
+    getDelta(groundTruth: number): number {
         if (!groundTruth) return 0
         const estimated = this.estimateCardinality()
         return estimated - groundTruth
     }
 
-    calculateErrorPercentage(groundTruth: number): string {
+    getErrorPercentage(groundTruth: number): string {
         if (!groundTruth) return '0 '
         const estimated = this.estimateCardinality()
         const error = (Math.abs(estimated - groundTruth) / groundTruth) * 100

@@ -26,7 +26,7 @@ const HyperLogLogDemo = () => {
     const [bucketCount, setBucketCount] = useState<number>(7)
     const [hll, setHll] = useState(new HyperLogLog(bucketCount))
     const [uniqueSet, setUniqueSet] = useState<Set<string>>(new Set())
-    const [clickMultiplier] = useState<number>(100)
+    const [clickMultiplier] = useState<number>(1_000)
     const [lastAddedIP, setLastAddedIP] = useState<string | null>(null)
 
     const generateRandomIP = () => {
@@ -35,24 +35,27 @@ const HyperLogLogDemo = () => {
     }
 
     const addSingleInputToHLL = () => {
+        const newSet = new Set(uniqueSet)
+
         if (input) {
             hll.add(input)
             setUniqueSet((prevSet) => new Set(prevSet).add(input))
             setLastAddedIP(input)
-            hll.detectOutOfBoundError(uniqueSet.size)
+            hll.detectOutOfBoundError(newSet.size)
         }
     }
 
     const addMultipleInputsToHLL = (count: number): void => {
+        const newIPs = Array.from({ length: count }, generateRandomIPv4)
+        let ip = ''
         const newSet = new Set(uniqueSet)
 
-        let ip = ''
-
-        for (let i = 0; i < count; i++) {
-            ip = generateRandomIPv4()
-            hll.add(ip)
+        for (let i = 0; i < newIPs.length; i++) {
+            ip = newIPs[i]
             newSet.add(ip)
+            hll.add(ip)
         }
+
         setLastAddedIP(ip)
         setUniqueSet(newSet)
         hll.detectOutOfBoundError(newSet.size)
@@ -76,7 +79,7 @@ const HyperLogLogDemo = () => {
     const resetHLL = (value: number) => {
         setBucketCount(value)
         setHll(new HyperLogLog(value))
-        setUniqueSet(new Set<string>())
+        setUniqueSet(new Set())
         setLastAddedIP(null)
     }
 
@@ -158,8 +161,8 @@ const HyperLogLogDemo = () => {
                     </Card>
 
                     {/* Buckets Display */}
-                    <ScrollArea className="h-60 overflow-y-auto rounded-md border-primary-foreground">
-                        <div className="grid grid-flow-dense grid-cols-12 gap-1 ">
+                    <ScrollArea className="h-60 py-4 overflow-y-auto rounded-md border-primary-foreground">
+                        <div className="grid grid-flow-dense grid-cols-12 gap-2">
                             {hll.buckets.map(
                                 (maxRunLength: number, index: number) => (
                                     <Card
@@ -167,8 +170,8 @@ const HyperLogLogDemo = () => {
                                         className={cn(
                                             'transition-all duration-300',
                                             index === hll.lastAddedBucket
-                                                ? 'border-4 border-primary shadow-border'
-                                                : 'border-accent'
+                                                ? 'scale-105 ring-2 ring-primary bg-accent'
+                                                : ''
                                         )}
                                     >
                                         <CardHeader>
@@ -188,8 +191,8 @@ const HyperLogLogDemo = () => {
                     <Button
                         onClick={() => addMultipleInputsToHLL(clickMultiplier)}
                     >
-                        <ArrowUpRight className="mr-2" /> Add{' '}
-                        {getFormattedNumber(clickMultiplier)} Random IPs
+                        <ArrowUpRight className="mr-2" /> Add {clickMultiplier}{' '}
+                        Random IPs
                     </Button>
                     {/* Metrics Cards */}
                     <div className="grid md:grid-cols-2 gap-4">
@@ -219,19 +222,20 @@ const HyperLogLogDemo = () => {
                                 <div className="space-2">
                                     Current Delta {'  '}
                                     {getFormattedNumber(
-                                        hll.calculateDelta(uniqueSet.size)
+                                        hll.getDelta(uniqueSet.size)
                                     )}
                                 </div>
                                 <div className="space-2">
                                     Current Error {'  '}
-                                    {hll.calculateErrorPercentage(
-                                        uniqueSet.size
-                                    )}
-                                    %
+                                    {hll.getErrorPercentage(uniqueSet.size)}%
                                 </div>
                                 <div className="space-2">
                                     Acceptable Error {'  ± '}
                                     {hll.stdError * 100}%
+                                </div>
+                                <div className="space-2">
+                                    Age {'  '}
+                                    {hll.age}
                                 </div>
                             </CardContent>
                         </Card>
