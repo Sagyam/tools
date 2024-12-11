@@ -1,11 +1,12 @@
 'use client'
 
+import { CardWithText } from '@/app/hyperloglog/components'
 import {
     generateRandomIPv4,
     getFormattedNumber,
 } from '@/app/hyperloglog/helper'
 import { HyperLogLog } from '@/app/hyperloglog/hll'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { HLLHistory } from '@/app/hyperloglog/types'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -18,7 +19,16 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
-import { AlertCircle, ArrowUpRight, Plus, RefreshCcw } from 'lucide-react'
+import {
+    ArrowUpRight,
+    Ban,
+    CheckCheck,
+    Dices,
+    Diff,
+    Plus,
+    RefreshCcw,
+    Triangle,
+} from 'lucide-react'
 import React, { useMemo, useState } from 'react'
 
 const HyperLogLogDemo = () => {
@@ -28,6 +38,12 @@ const HyperLogLogDemo = () => {
     const [uniqueSet, setUniqueSet] = useState<Set<string>>(new Set())
     const [clickMultiplier] = useState<number>(1_000)
     const [lastAddedIP, setLastAddedIP] = useState<string | null>(null)
+    const [history, setHistory] = useState<HLLHistory>({
+        trueValue: [],
+        estimate: [],
+        deltas: [],
+        error: [],
+    })
 
     const generateRandomIP = () => {
         const newIP = generateRandomIPv4()
@@ -45,6 +61,24 @@ const HyperLogLogDemo = () => {
         }
     }
 
+    const appendToHistory = () => {
+        const trueValue = uniqueSet.size
+        const estimate = hll.estimateCardinality()
+        const delta = hll.getDelta(trueValue)
+        const error = hll.getErrorPercentage(trueValue)
+
+        const newHistory = {
+            trueValue: [...history.trueValue, trueValue],
+            estimate: [...history.estimate, estimate],
+            deltas: [...history.deltas, delta],
+            error: [...history.error, parseFloat(error)],
+        }
+
+        // TODO: Keep only last 5 records
+
+        setHistory(newHistory)
+    }
+
     const addMultipleInputsToHLL = (count: number): void => {
         const newIPs = Array.from({ length: count }, generateRandomIPv4)
         let ip = ''
@@ -59,6 +93,7 @@ const HyperLogLogDemo = () => {
         setLastAddedIP(ip)
         setUniqueSet(newSet)
         hll.detectOutOfBoundError(newSet.size)
+        appendToHistory()
     }
 
     const lastHashDetails = useMemo(() => {
@@ -81,6 +116,12 @@ const HyperLogLogDemo = () => {
         setHll(new HyperLogLog(value))
         setUniqueSet(new Set())
         setLastAddedIP(null)
+        setHistory({
+            trueValue: [],
+            estimate: [],
+            deltas: [],
+            error: [],
+        })
     }
 
     return (
@@ -114,7 +155,7 @@ const HyperLogLogDemo = () => {
                         <Slider
                             defaultValue={[bucketCount]}
                             min={1}
-                            max={14}
+                            max={12}
                             step={1}
                             onValueChange={(value) => {
                                 resetHLL(value[0])
@@ -195,63 +236,59 @@ const HyperLogLogDemo = () => {
                         Random IPs
                     </Button>
                     {/* Metrics Cards */}
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Actual Unique IP Count</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {getFormattedNumber(uniqueSet.size)}
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>
-                                    Estimated Unique IPs Count
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {getFormattedNumber(hll.estimateCardinality())}
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>HLL Statistics</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-2">
-                                    Current Delta {'  '}
-                                    {getFormattedNumber(
-                                        hll.getDelta(uniqueSet.size)
-                                    )}
-                                </div>
-                                <div className="space-2">
-                                    Current Error {'  '}
-                                    {hll.getErrorPercentage(uniqueSet.size)}%
-                                </div>
-                                <div className="space-2">
-                                    Acceptable Error {'  ± '}
-                                    {hll.stdError * 100}%
-                                </div>
-                                <div className="space-2">
-                                    Age {'  '}
-                                    {hll.age}
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <div className="grid md:grid-cols-5 gap-4">
+                        <CardWithText
+                            title={getFormattedNumber(uniqueSet.size)}
+                            subtitle={'Actual Count'}
+                            description="Actual number of unique IPs as counted by a Set"
+                            icon={<CheckCheck />}
+                        />
+
+                        <CardWithText
+                            title={getFormattedNumber(
+                                hll.estimateCardinality()
+                            )}
+                            subtitle={'Estimated Count'}
+                            description={`Estimated number of unique IPs as counted by HyperLogLog.`}
+                            icon={<Dices />}
+                            extraStyle={
+                                hll.warningMessage.length > 0
+                                    ? 'border-destructive/50 text-destructive dark:border-destructive'
+                                    : ''
+                            }
+                        />
+
+                        <CardWithText
+                            title={getFormattedNumber(
+                                hll.getDelta(uniqueSet.size)
+                            )}
+                            subtitle={'Difference'}
+                            description={`Difference between actual and estimated count.`}
+                            icon={<Triangle />}
+                        />
+
+                        <CardWithText
+                            title={`${hll.stdError * 100}%`}
+                            subtitle={' Margin of error'}
+                            description={`
+                                          The estimated count should be within ± ${hll.stdError * 100}% of the actual count.
+                                          Do note that this is not a guarantee.
+                                        `}
+                            icon={<Diff />}
+                        />
+
+                        <CardWithText
+                            title={`${hll.getErrorPercentage(uniqueSet.size)}%`}
+                            subtitle={'Actual error'}
+                            description={`Percentage by which the estimated count is off from the actual count.`}
+                            icon={<Ban />}
+                            extraStyle={
+                                hll.warningMessage.length > 0
+                                    ? 'border-destructive/50 text-destructive dark:border-destructive'
+                                    : ''
+                            }
+                        />
                     </div>
-                    {/* Alert Box */}
-                    <Alert
-                        className={`transition-all duration-200 animate-accordion-down 
-                                    ${hll.warningMessage ? '' : 'opacity-0'}`}
-                        variant="warning"
-                    >
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Warning</AlertTitle>
-                        <AlertDescription>
-                            {hll.warningMessage}
-                        </AlertDescription>
-                    </Alert>
                 </CardContent>
             </Card>
         </div>
