@@ -1,6 +1,8 @@
 'use client'
 
-import { CardWithText } from '@/app/hyperloglog/components'
+import CardWitAreaChart from '@/app/hyperloglog/card-with-area-chart'
+import CardWithBarGraph from '@/app/hyperloglog/card-with-bar-graph'
+import { CardWithText } from '@/app/hyperloglog/card-with-text'
 import {
     generateRandomIPv4,
     getFormattedNumber,
@@ -20,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
 import {
-    ArrowUpRight,
+    ArrowDown,
     Ban,
     CheckCheck,
     Dices,
@@ -29,21 +31,32 @@ import {
     RefreshCcw,
     Triangle,
 } from 'lucide-react'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 const HyperLogLogDemo = () => {
     const [input, setInput] = useState<string>('')
     const [bucketCount, setBucketCount] = useState<number>(7)
     const [hll, setHll] = useState(new HyperLogLog(bucketCount))
     const [uniqueSet, setUniqueSet] = useState<Set<string>>(new Set())
-    const [clickMultiplier] = useState<number>(1_000)
     const [lastAddedIP, setLastAddedIP] = useState<string | null>(null)
     const [history, setHistory] = useState<HLLHistory>({
-        trueValue: [],
-        estimate: [],
-        deltas: [],
-        error: [],
+        entries: [],
+        maxEntries: 50,
     })
+
+    const bucketRefs = useRef<Record<number, HTMLDivElement>>({})
+    useEffect(() => {
+        if (
+            hll.lastAddedBucket !== null &&
+            bucketRefs.current[hll.lastAddedBucket]
+        ) {
+            bucketRefs.current[hll.lastAddedBucket]?.scrollIntoView({
+                behavior: 'smooth', // Smooth scrolling
+                block: 'center', // Center the element vertically
+                inline: 'nearest', // Bring the element to the nearest horizontal edge
+            })
+        }
+    }, [hll.lastAddedBucket])
 
     const generateRandomIP = () => {
         const newIP = generateRandomIPv4()
@@ -58,25 +71,43 @@ const HyperLogLogDemo = () => {
             setUniqueSet((prevSet) => new Set(prevSet).add(input))
             setLastAddedIP(input)
             hll.detectOutOfBoundError(newSet.size)
+            appendToHistory(newSet.size)
         }
     }
 
-    const appendToHistory = () => {
-        const trueValue = uniqueSet.size
+    const appendToHistory = (freshTrueValue: number) => {
         const estimate = hll.estimateCardinality()
-        const delta = hll.getDelta(trueValue)
-        const error = hll.getErrorPercentage(trueValue)
+        const delta = hll.getDelta(freshTrueValue)
+        const error = parseFloat(hll.getErrorPercentage(freshTrueValue))
 
-        const newHistory = {
-            trueValue: [...history.trueValue, trueValue],
-            estimate: [...history.estimate, estimate],
-            deltas: [...history.deltas, delta],
-            error: [...history.error, parseFloat(error)],
-        }
+        setHistory((prevHistory) => {
+            const newEntry = {
+                index:
+                    prevHistory.entries.length > 0
+                        ? prevHistory.entries[prevHistory.entries.length - 1]
+                              .index + 1
+                        : 1,
+                trueValue: freshTrueValue,
+                estimate,
+                delta,
+                error,
+                timestamp: Date.now(),
+            }
 
-        // TODO: Keep only last 5 records
+            const updatedEntries = prevHistory.maxEntries
+                ? [
+                      ...prevHistory.entries.slice(
+                          -(prevHistory.maxEntries - 1)
+                      ),
+                      newEntry,
+                  ]
+                : [...prevHistory.entries, newEntry]
 
-        setHistory(newHistory)
+            return {
+                ...prevHistory,
+                entries: updatedEntries,
+            }
+        })
     }
 
     const addMultipleInputsToHLL = (count: number): void => {
@@ -93,7 +124,7 @@ const HyperLogLogDemo = () => {
         setLastAddedIP(ip)
         setUniqueSet(newSet)
         hll.detectOutOfBoundError(newSet.size)
-        appendToHistory()
+        appendToHistory(newSet.size)
     }
 
     const lastHashDetails = useMemo(() => {
@@ -117,10 +148,8 @@ const HyperLogLogDemo = () => {
         setUniqueSet(new Set())
         setLastAddedIP(null)
         setHistory({
-            trueValue: [],
-            estimate: [],
-            deltas: [],
-            error: [],
+            entries: [],
+            maxEntries: 50,
         })
     }
 
@@ -147,23 +176,73 @@ const HyperLogLogDemo = () => {
                             <Plus className="mr-2" /> Add to HLL
                         </Button>
                     </div>
-                    {/* Bucket Count Slider */}
-                    <div>
-                        <label className="block mb-2">
-                            Number of Buckets: {Math.pow(2, bucketCount)}
-                        </label>
-                        <Slider
-                            defaultValue={[bucketCount]}
-                            min={1}
-                            max={12}
-                            step={1}
-                            onValueChange={(value) => {
-                                resetHLL(value[0])
-                            }}
-                        />
-                    </div>
-                    {/* Hash Visualization */}
 
+                    {/* Bucket Count Slider */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>
+                                Number of Buckets: {Math.pow(2, bucketCount)}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Slider
+                                defaultValue={[bucketCount]}
+                                min={1}
+                                max={12}
+                                step={1}
+                                onValueChange={(value) => {
+                                    resetHLL(value[0])
+                                }}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Random IPs Button */}
+                    <div className="flex space-x-4">
+                        <Button
+                            size={'lg'}
+                            onClick={() => addMultipleInputsToHLL(1000)}
+                        >
+                            <ArrowDown className="mr-1" /> Add 1000 Random IPs
+                        </Button>
+                        <Button
+                            variant={'outline'}
+                            className={
+                                'bg-green-600 hover:bg-green-700 text-white'
+                            }
+                            size={'lg'}
+                            onClick={() => addMultipleInputsToHLL(5000)}
+                        >
+                            <ArrowDown className="mr-1" /> Add 5K Random IPs
+                        </Button>
+                        <Button
+                            className={
+                                'bg-amber-500 hover:bg-amber-700 text-white'
+                            }
+                            size={'lg'}
+                            onClick={() => addMultipleInputsToHLL(10000)}
+                        >
+                            <ArrowDown className="mr-1" /> Add 10K Random IPs
+                        </Button>{' '}
+                        <Button
+                            variant={'destructive'}
+                            size={'lg'}
+                            onClick={() => addMultipleInputsToHLL(50000)}
+                        >
+                            <ArrowDown className="mr-1" /> Add 50K Random IPs
+                        </Button>{' '}
+                        <Button
+                            className={
+                                'bg-black border-2 hover:bg-gray-900 text-white'
+                            }
+                            size={'lg'}
+                            onClick={() => addMultipleInputsToHLL(100000)}
+                        >
+                            <ArrowDown className="mr-1" /> Add 100K Random IPs
+                        </Button>{' '}
+                    </div>
+
+                    {/* Hash Visualization */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Hash Representation</CardTitle>
@@ -202,39 +281,45 @@ const HyperLogLogDemo = () => {
                     </Card>
 
                     {/* Buckets Display */}
-                    <ScrollArea className="h-60 py-4 overflow-y-auto rounded-md border-primary-foreground">
-                        <div className="grid grid-flow-dense grid-cols-12 gap-2">
-                            {hll.buckets.map(
-                                (maxRunLength: number, index: number) => (
-                                    <Card
-                                        key={index}
-                                        className={cn(
-                                            'transition-all duration-300',
-                                            index === hll.lastAddedBucket
-                                                ? 'scale-105 ring-2 ring-primary bg-accent'
-                                                : ''
-                                        )}
-                                    >
-                                        <CardHeader>
-                                            <CardTitle>
-                                                {maxRunLength}
-                                            </CardTitle>
-                                            <CardDescription>
-                                                Bucket {index}
-                                            </CardDescription>
-                                        </CardHeader>
-                                    </Card>
-                                )
-                            )}
-                        </div>
-                    </ScrollArea>
-                    {/* Random IPs Button */}
-                    <Button
-                        onClick={() => addMultipleInputsToHLL(clickMultiplier)}
-                    >
-                        <ArrowUpRight className="mr-2" /> Add {clickMultiplier}{' '}
-                        Random IPs
-                    </Button>
+                    <Card className="p-2">
+                        <CardContent>
+                            <ScrollArea className="h-60 overflow-y-auto rounded-md border-primary-foreground">
+                                <div className="grid grid-flow-dense grid-cols-12 gap-2">
+                                    {hll.buckets.map(
+                                        (
+                                            maxRunLength: number,
+                                            index: number
+                                        ) => (
+                                            <Card
+                                                key={index}
+                                                ref={(el) =>
+                                                    (bucketRefs.current[index] =
+                                                        el as HTMLDivElement)
+                                                }
+                                                className={cn(
+                                                    'transition-all duration-300',
+                                                    index ===
+                                                        hll.lastAddedBucket
+                                                        ? 'scale-105 ring-2 ring-primary bg-accent'
+                                                        : ''
+                                                )}
+                                            >
+                                                <CardHeader>
+                                                    <CardTitle>
+                                                        {maxRunLength}
+                                                    </CardTitle>
+                                                    <CardDescription>
+                                                        Bucket {index}
+                                                    </CardDescription>
+                                                </CardHeader>
+                                            </Card>
+                                        )
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+
                     {/* Metrics Cards */}
                     <div className="grid md:grid-cols-5 gap-4">
                         <CardWithText
@@ -287,6 +372,53 @@ const HyperLogLogDemo = () => {
                                     ? 'border-destructive/50 text-destructive dark:border-destructive'
                                     : ''
                             }
+                        />
+                    </div>
+
+                    {/* Graph */}
+
+                    <div className="grid md:grid-cols-1 gap-4">
+                        <CardWitAreaChart
+                            chartName="Estimate vs Actual Count"
+                            subtitle="Closer these values, better the estimate"
+                            tooltipDescription={`Estimated count should be within ± ${hll.stdError * 100}% of the actual count.`}
+                            data={history.entries.map((entry) => ({
+                                index: entry.index,
+                                Estimate: entry.estimate,
+                                Actual: entry.trueValue,
+                            }))}
+                            dataLabels={['Estimate', 'Actual']}
+                            colorOverrides={{
+                                Estimate: 'hsl(var(--chart-1))',
+                                Actual: 'hsl(var(--chart-3))',
+                            }}
+                        />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <CardWithBarGraph
+                            chartName="Difference in Count"
+                            subtitle={`Difference between estimated and actual count`}
+                            data={history.entries.map((entry) => ({
+                                index: entry.index,
+                                Delta: entry.delta,
+                            }))}
+                            dataLabels={['Delta']}
+                            tooltipDescription={`Difference between estimated and actual count`}
+                        />
+
+                        <CardWithBarGraph
+                            chartName="Percentage Error"
+                            subtitle={`Ideally this value should be within ${hll.stdError * 100}%`}
+                            data={history.entries.map((entry) => ({
+                                index: entry.index,
+                                Error: entry.error,
+                            }))}
+                            dataLabels={['Error']}
+                            tooltipDescription={`Estimated count should be within ± ${hll.stdError * 100}% of the actual count.`}
+                            colorOverrides={{
+                                Error: 'hsl(var(--chart-5))',
+                            }}
                         />
                     </div>
                 </CardContent>
