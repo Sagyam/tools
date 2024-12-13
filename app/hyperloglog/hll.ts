@@ -51,12 +51,12 @@ export class HyperLogLog {
     add(value: string) {
         const hashedValue = this.hash(value)
         const bucketIndex = hashedValue % this.m
-        const runLength = this.leadingZeros(hashedValue)
+        const runLength = this.leadingZeros(hashedValue) + 1
 
         // Update max run length for bucket
         this.buckets[bucketIndex] = Math.max(
             this.buckets[bucketIndex],
-            runLength + 1
+            runLength
         )
 
         // Track last added bucket for UI

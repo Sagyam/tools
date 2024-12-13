@@ -31,14 +31,13 @@ import {
     RefreshCcw,
     Triangle,
 } from 'lucide-react'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 const HyperLogLogDemo = () => {
     const [input, setInput] = useState<string>('')
     const [bucketCount, setBucketCount] = useState<number>(7)
     const [hll, setHll] = useState(new HyperLogLog(bucketCount))
     const [uniqueSet, setUniqueSet] = useState<Set<string>>(new Set())
-    const [lastAddedIP, setLastAddedIP] = useState<string | null>(null)
     const [history, setHistory] = useState<HLLHistory>({
         entries: [],
         maxEntries: 50,
@@ -52,8 +51,8 @@ const HyperLogLogDemo = () => {
         ) {
             bucketRefs.current[hll.lastAddedBucket]?.scrollIntoView({
                 behavior: 'smooth',
-                block: 'nearest',
-                inline: 'nearest',
+                block: 'center',
+                inline: 'center',
             })
         }
     }, [hll.lastAddedBucket])
@@ -69,7 +68,6 @@ const HyperLogLogDemo = () => {
         if (input) {
             hll.add(input)
             setUniqueSet((prevSet) => new Set(prevSet).add(input))
-            setLastAddedIP(input)
             hll.detectOutOfBoundError(newSet.size)
             appendToHistory(newSet.size)
         }
@@ -121,32 +119,15 @@ const HyperLogLogDemo = () => {
             hll.add(ip)
         }
 
-        setLastAddedIP(ip)
         setUniqueSet(newSet)
         hll.detectOutOfBoundError(newSet.size)
         appendToHistory(newSet.size)
     }
 
-    const lastHashDetails = useMemo(() => {
-        if (!lastAddedIP) return null
-
-        const hashedValue = hll.hash(lastAddedIP)
-        const bucketIndex = (hashedValue >>> 0) % hll.m
-        const runLength = hll.leadingZeros(hashedValue) + 1
-        const binaryHash = hashedValue.toString(2).padStart(32, '0')
-
-        return {
-            hash: binaryHash,
-            bucketIndex,
-            runLength,
-        }
-    }, [lastAddedIP, hll])
-
     const resetHLL = (value: number) => {
         setBucketCount(value)
         setHll(new HyperLogLog(value))
         setUniqueSet(new Set())
-        setLastAddedIP(null)
         setHistory({
             entries: [],
             maxEntries: 50,
@@ -194,44 +175,6 @@ const HyperLogLogDemo = () => {
                                     resetHLL(value[0])
                                 }}
                             />
-                        </CardContent>
-                    </Card>
-
-                    {/* Hash Visualization */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Hash Representation</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="font-mono text-sm">
-                                    {lastHashDetails &&
-                                        lastHashDetails.hash
-                                            .split('')
-                                            .map(
-                                                (
-                                                    bit: string,
-                                                    index: number
-                                                ) => (
-                                                    <span
-                                                        key={index}
-                                                        className={`${index < 16 ? 'text-blue-500' : 'text-green-500'}
-                                                              ${bit === '1' ? 'font-bold' : 'text-opacity-50'}`}
-                                                    >
-                                                        {bit}
-                                                    </span>
-                                                )
-                                            )}
-                                </div>
-                                <div className="text-sm">
-                                    <strong>Bucket:</strong>{' '}
-                                    {lastHashDetails &&
-                                        lastHashDetails.bucketIndex}{' '}
-                                    |<strong> Run Length:</strong>{' '}
-                                    {lastHashDetails &&
-                                        lastHashDetails.runLength}
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -283,7 +226,7 @@ const HyperLogLogDemo = () => {
                     {/* Buckets Display */}
                     <Card className="p-2">
                         <CardContent>
-                            <ScrollArea className="h-32 rounded-md border-primary-foreground">
+                            <ScrollArea className="h-[150px] rounded-md border-primary-foreground">
                                 <div className="grid grid-flow-dense grid-cols-12 gap-2">
                                     {hll.buckets.map(
                                         (
@@ -337,9 +280,11 @@ const HyperLogLogDemo = () => {
                             description={`Estimated number of unique IPs as counted by HyperLogLog.`}
                             icon={<Dices />}
                             extraStyle={
-                                hll.warningMessage.length > 0
-                                    ? 'border-destructive/50 text-destructive dark:border-destructive'
-                                    : ''
+                                hll.estimateCardinality() === uniqueSet.size
+                                    ? 'border-green-500 text-green-500 dark:border-green-500'
+                                    : hll.warningMessage.length
+                                      ? 'border-destructive/50 text-destructive dark:border-destructive'
+                                      : ''
                             }
                         />
 
@@ -368,9 +313,11 @@ const HyperLogLogDemo = () => {
                             description={`Percentage by which the estimated count is off from the actual count.`}
                             icon={<Ban />}
                             extraStyle={
-                                hll.warningMessage.length > 0
-                                    ? 'border-destructive/50 text-destructive dark:border-destructive'
-                                    : ''
+                                hll.estimateCardinality() === uniqueSet.size
+                                    ? 'border-green-500 text-green-500 dark:border-green-500'
+                                    : hll.warningMessage.length
+                                      ? 'border-destructive/50 text-destructive dark:border-destructive'
+                                      : ''
                             }
                         />
                     </div>
