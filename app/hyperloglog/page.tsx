@@ -51,9 +51,9 @@ const HyperLogLogDemo = () => {
             bucketRefs.current[hll.lastAddedBucket]
         ) {
             bucketRefs.current[hll.lastAddedBucket]?.scrollIntoView({
-                behavior: 'smooth', // Smooth scrolling
-                block: 'center', // Center the element vertically
-                inline: 'nearest', // Bring the element to the nearest horizontal edge
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest',
             })
         }
     }, [hll.lastAddedBucket])
@@ -197,6 +197,44 @@ const HyperLogLogDemo = () => {
                         </CardContent>
                     </Card>
 
+                    {/* Hash Visualization */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Hash Representation</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <div className="font-mono text-sm">
+                                    {lastHashDetails &&
+                                        lastHashDetails.hash
+                                            .split('')
+                                            .map(
+                                                (
+                                                    bit: string,
+                                                    index: number
+                                                ) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`${index < 16 ? 'text-blue-500' : 'text-green-500'}
+                                                              ${bit === '1' ? 'font-bold' : 'text-opacity-50'}`}
+                                                    >
+                                                        {bit}
+                                                    </span>
+                                                )
+                                            )}
+                                </div>
+                                <div className="text-sm">
+                                    <strong>Bucket:</strong>{' '}
+                                    {lastHashDetails &&
+                                        lastHashDetails.bucketIndex}{' '}
+                                    |<strong> Run Length:</strong>{' '}
+                                    {lastHashDetails &&
+                                        lastHashDetails.runLength}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Random IPs Button */}
                     <div className="flex space-x-4">
                         <Button
@@ -242,48 +280,10 @@ const HyperLogLogDemo = () => {
                         </Button>{' '}
                     </div>
 
-                    {/* Hash Visualization */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Hash Representation</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="font-mono text-sm">
-                                    {lastHashDetails &&
-                                        lastHashDetails.hash
-                                            .split('')
-                                            .map(
-                                                (
-                                                    bit: string,
-                                                    index: number
-                                                ) => (
-                                                    <span
-                                                        key={index}
-                                                        className={`${index < 16 ? 'text-blue-500' : 'text-green-500'}
-                                                              ${bit === '1' ? 'font-bold' : 'text-opacity-50'}`}
-                                                    >
-                                                        {bit}
-                                                    </span>
-                                                )
-                                            )}
-                                </div>
-                                <div className="text-sm">
-                                    <strong>Bucket:</strong>{' '}
-                                    {lastHashDetails &&
-                                        lastHashDetails.bucketIndex}{' '}
-                                    |<strong> Run Length:</strong>{' '}
-                                    {lastHashDetails &&
-                                        lastHashDetails.runLength}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     {/* Buckets Display */}
                     <Card className="p-2">
                         <CardContent>
-                            <ScrollArea className="h-60 overflow-y-auto rounded-md border-primary-foreground">
+                            <ScrollArea className="h-32 rounded-md border-primary-foreground">
                                 <div className="grid grid-flow-dense grid-cols-12 gap-2">
                                     {hll.buckets.map(
                                         (
