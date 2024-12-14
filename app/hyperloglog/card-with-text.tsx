@@ -32,9 +32,7 @@ export const CardWithText: React.FC<TextCardProps> = ({
                             {icon}
                         </CardContent>
                         <CardHeader>
-                            <CardTitle className="text-6xl overflow-hidden">
-                                {title}
-                            </CardTitle>
+                            <CardTitle className="text-5xl">{title}</CardTitle>
                         </CardHeader>
                     </Card>
                 </TooltipTrigger>

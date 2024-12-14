@@ -1,22 +1,32 @@
 import { x86 as MurmurHash3 } from 'murmurhash3js'
 
+interface AddResult {
+    hash?: number | string
+    currentRunLength?: number
+    lastRunLength?: number
+    selectedBucket?: number
+    wasAdded?: boolean
+}
+
 export class HyperLogLog {
     buckets: number[]
-    lastAddedBucket: number
+    lastAddedBucket: number | null
     m: number
     alpha: number
     stdError: number
     age: 'Immature' | 'Prime' | 'Exhausted'
     warningMessage: string
+    private lastRunLength: number
 
     constructor(buckets: number) {
         this.m = Math.pow(2, buckets)
         this.buckets = new Array(this.m).fill(0)
-        this.lastAddedBucket = -1
+        this.lastAddedBucket = null
         this.alpha = this.calculateAlpha(this.m)
         this.stdError = this.calculateStdError()
         this.age = 'Immature'
         this.warningMessage = ''
+        this.lastRunLength = 0
     }
 
     calculateStdError(): number {
@@ -48,19 +58,34 @@ export class HyperLogLog {
         return 31 - Math.floor(Math.log2(num))
     }
 
-    add(value: string) {
+    add(value: string, detailed: boolean = false): AddResult | void {
         const hashedValue = this.hash(value)
         const bucketIndex = hashedValue % this.m
-        const runLength = this.leadingZeros(hashedValue) + 1
+        const currentRunLength = this.leadingZeros(hashedValue) + 1
 
-        // Update max run length for bucket
-        this.buckets[bucketIndex] = Math.max(
-            this.buckets[bucketIndex],
-            runLength
-        )
+        // Store the previous run length for this bucket
+        const lastBucketRunLength = this.buckets[bucketIndex]
+        const wasAdded = currentRunLength > lastBucketRunLength
+
+        // Update max run length for bucket if necessary
+        if (wasAdded) {
+            this.buckets[bucketIndex] = currentRunLength
+        }
 
         // Track last added bucket for UI
         this.lastAddedBucket = bucketIndex
+        this.lastRunLength = lastBucketRunLength
+
+        // If detailed mode is on, return additional information
+        if (detailed) {
+            return {
+                hash: hashedValue,
+                currentRunLength,
+                selectedBucket: bucketIndex,
+                wasAdded,
+                lastRunLength: lastBucketRunLength,
+            }
+        }
     }
 
     estimateCardinality() {
