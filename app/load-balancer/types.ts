@@ -1,25 +1,20 @@
-export interface Metric {
-    time: number
-    value: number
-}
-
-export interface SimulationMetrics {
-    requestsServed: Metric[]
-    requestsDropped: Metric[]
-    avgTurnAroundTime: Metric[]
-}
-
-export interface Server {
+export interface Request {
     id: number
-    currentConnections: number
-    totalResponseTime: number
-    requestsServed: number
+    clientIndex: number
+    serverIndex: number
+    color: string
+    phase: 'toLB' | 'toServer'
+    weight: number
 }
 
-export interface SimulationConfig {
-    algorithm: string
-    clientCount: number
-    serverCount: number
-    rpsVariance: number
-    requestCostVariance: number
+export interface Client {
+    name: string
+    rate: number
+}
+
+export interface ServerState {
+    name: string
+    cores: number
+    usedCores: number
+    drops: number
 }
