@@ -19,4 +19,4 @@ export const algorithms: Record<string, string> = {
     WRR: 'Weighted Round Robin',
 }
 
-const weights: number[] = [1, 2, 1]
+export const weights: number[] = [1, 2, 1]
