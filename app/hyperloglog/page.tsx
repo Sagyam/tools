@@ -1,7 +1,5 @@
 'use client'
 
-import CardWitAreaChart from '@/app/hyperloglog/card-with-area-chart'
-import CardWithBarGraph from '@/app/hyperloglog/card-with-bar-graph'
 import { CardWithText } from '@/app/hyperloglog/card-with-text'
 import {
     generateRandomIPv4,
@@ -222,25 +220,28 @@ const HyperLogLogDemo = () => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Enter IPv4 Address"
-                            className="w-full md:flex-grow"
+                            className="flex-1 border border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md md:w-1/2 lg:w-1/3 xl:w-1/4"
                         />
                         <div className="flex space-x-2">
                             <Button
-                                variant="outline"
+                                variant="default"
+                                size="sm"
+                                className="w-full bg-blue-400 hover:bg-blue-700 text-white"
                                 onClick={generateRandomIP}
-                                className="w-1/2 md:w-auto"
                             >
                                 <RefreshCcw className="mr-2 size-4" /> Random IP
                             </Button>
                             <Button
+                                variant="secondary"
+                                size="sm"
+                                className="w-full bg-green-400 hover:bg-green-700 text-white"
                                 onClick={addSingleInputToHLL}
-                                className="w-1/2 md:w-auto"
                             >
                                 <Plus className="mr-2 size-4" /> Add to HLL
                             </Button>
                         </div>
                     </div>
-                    {/* Bucket Count Slider - Full width, responsive padding */}
+
                     <Card className="w-full">
                         <CardHeader>
                             <CardTitle className="text-base md:text-lg">
@@ -256,7 +257,7 @@ const HyperLogLogDemo = () => {
                                 onValueChange={(value) => {
                                     resetHLL(value[0])
                                 }}
-                                className="w-full"
+                                className="w-full bg-accent"
                             />
                         </CardContent>
                     </Card>
@@ -271,8 +272,9 @@ const HyperLogLogDemo = () => {
                         <CardContent>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                                 <Button
+                                    variant={'outline'}
                                     size={'sm'}
-                                    className="w-full"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                     onClick={() => addMultipleInputsToHLL(1000)}
                                 >
                                     <LucideDices className="mr-1 size-4" /> 1K
@@ -288,6 +290,7 @@ const HyperLogLogDemo = () => {
                                     IPs
                                 </Button>
                                 <Button
+                                    variant={'outline'}
                                     className="w-full bg-amber-500 hover:bg-amber-700 text-white"
                                     size={'sm'}
                                     onClick={() =>
@@ -298,9 +301,9 @@ const HyperLogLogDemo = () => {
                                     IPs
                                 </Button>
                                 <Button
-                                    variant={'destructive'}
+                                    variant={'outline'}
                                     size={'sm'}
-                                    className="w-full"
+                                    className="w-full bg-red-600 hover:bg-red-700 text-white"
                                     onClick={() =>
                                         addMultipleInputsToHLL(50000)
                                     }
@@ -309,7 +312,8 @@ const HyperLogLogDemo = () => {
                                     50K IPs
                                 </Button>
                                 <Button
-                                    className="w-full bg-black border-2 hover:bg-gray-900 text-white"
+                                    variant={'outline'}
+                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                                     size={'sm'}
                                     onClick={() =>
                                         addMultipleInputsToHLL(100000)
@@ -394,13 +398,6 @@ const HyperLogLogDemo = () => {
                             subtitle={'Estimated Count'}
                             description={`Estimated number of unique IPs as counted by HyperLogLog.`}
                             icon={<Dices className="size-6" />}
-                            extraStyle={
-                                hll.estimateCardinality() === uniqueSet.size
-                                    ? 'border-green-500 text-green-500 dark:border-green-500'
-                                    : hll.warningMessage.length
-                                      ? 'border-destructive/50 text-destructive dark:border-destructive'
-                                      : ''
-                            }
                         />
 
                         <CardWithText
@@ -424,57 +421,6 @@ const HyperLogLogDemo = () => {
                             subtitle={'Actual error'}
                             description={`Percentage by which the estimated count is off from the actual count.`}
                             icon={<Ban className="size-6" />}
-                            extraStyle={
-                                hll.estimateCardinality() === uniqueSet.size
-                                    ? 'border-green-500 text-green-500 dark:border-green-500'
-                                    : hll.warningMessage.length
-                                      ? 'border-destructive/50 text-destructive dark:border-destructive'
-                                      : ''
-                            }
-                        />
-                    </div>
-                    {/* Graphs - Responsive layout */}
-                    <div className="grid grid-cols-1 gap-4">
-                        <CardWitAreaChart
-                            chartName="Estimate vs Actual Count"
-                            subtitle="Closer these values, better the estimate"
-                            tooltipDescription={`Estimated count should be within ± ${hll.stdError * 100}% of the actual count.`}
-                            data={history.entries.map((entry) => ({
-                                index: entry.index,
-                                Estimate: entry.estimate,
-                                Actual: entry.trueValue,
-                            }))}
-                            dataLabels={['Estimate', 'Actual']}
-                            colorOverrides={{
-                                Estimate: 'hsl(var(--chart-1))',
-                                Actual: 'hsl(var(--chart-3))',
-                            }}
-                        />
-                    </div>
-                    <div className="grid grid-cols-1 gap-4">
-                        <CardWithBarGraph
-                            chartName="Difference in Count"
-                            subtitle={`Difference between estimated and actual count`}
-                            data={history.entries.map((entry) => ({
-                                index: entry.index,
-                                Delta: entry.delta,
-                            }))}
-                            dataLabels={['Delta']}
-                            tooltipDescription={`Difference between estimated and actual count`}
-                        />
-
-                        <CardWithBarGraph
-                            chartName="Percentage Error"
-                            subtitle={`Ideally this value should be within ${hll.stdError * 100}%`}
-                            data={history.entries.map((entry) => ({
-                                index: entry.index,
-                                Error: entry.error,
-                            }))}
-                            dataLabels={['Error']}
-                            tooltipDescription={`Estimated count should be within ± ${hll.stdError * 100}% of the actual count.`}
-                            colorOverrides={{
-                                Error: 'hsl(var(--chart-5))',
-                            }}
                         />
                     </div>
                 </CardContent>

@@ -53,8 +53,7 @@ export const CardWithBarGraph: React.FC<CardWithBarGraphProps> = ({
             config[label] = {
                 label,
                 color:
-                    colorOverrides[label] ||
-                    `hsl(var(--chart-${(index % 5) + 1}))`,
+                    colorOverrides[label] || `var(--chart-${(index % 5) + 1})`,
             }
             return config
         },

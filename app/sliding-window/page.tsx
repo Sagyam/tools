@@ -325,7 +325,7 @@ const SlidingWindowRateLimiter = () => {
                         {/* Window edge labels */}
                         <div className="absolute top-2 left-0 right-0">
                             <div
-                                className="absolute text-xs font-medium text-purple-600 bg-white px-2 py-1 rounded shadow"
+                                className="absolute text-xs font-medium text-purple-600 bg-white px-2 py-1 rounded shadow-sm"
                                 style={{
                                     left: `${Math.max(10, (currentTime - windowDuration - timeOffset) * pixelsPerMs)}px`,
                                     transform: 'translateX(-50%)',
@@ -334,7 +334,7 @@ const SlidingWindowRateLimiter = () => {
                                 Window Start
                             </div>
                             <div
-                                className="absolute text-xs font-medium text-purple-600 bg-white px-2 py-1 rounded shadow"
+                                className="absolute text-xs font-medium text-purple-600 bg-white px-2 py-1 rounded shadow-sm"
                                 style={{
                                     left: `${(currentTime - timeOffset) * pixelsPerMs}px`,
                                     transform: 'translateX(-50%)',

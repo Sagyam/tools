@@ -224,7 +224,7 @@ const BloomFilterDemo: React.FC = () => {
                             placeholder="Enter item to add to Bloom Filter"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            className="flex-grow"
+                            className="grow"
                         />
                         <Button onClick={handleAddItem}>Add Item</Button>
                     </div>
@@ -272,7 +272,7 @@ const BloomFilterDemo: React.FC = () => {
                             placeholder="Enter item to check"
                             value={checkItem}
                             onChange={(e) => setCheckItem(e.target.value)}
-                            className="flex-grow"
+                            className="grow"
                         />
                         <Button onClick={handleCheckItem}>Check Item</Button>
                     </div>
