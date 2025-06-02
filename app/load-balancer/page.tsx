@@ -1,84 +1,32 @@
 'use client'
 
 import { ClientComponent } from '@/app/load-balancer/client'
-import {
-    initialClients,
-    initialServers,
-    requestColors,
-} from '@/app/load-balancer/data'
+import { initialClients, initialServers } from '@/app/load-balancer/data'
 import { LB } from '@/app/load-balancer/lb'
 import { LBControls } from '@/app/load-balancer/lb-controls'
+import { MetricsDashboard } from '@/app/load-balancer/metrics-dashboard'
+import { ServerQueue } from '@/app/load-balancer/server-queue'
 import { ServerComponent } from '@/app/load-balancer/sever'
-import { Client, Request, ServerState } from '@/app/load-balancer/types'
+import { useLoadBalancer } from '@/app/load-balancer/use-load-balancer'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
-import { getNextServerRR, getNextServerWRR } from './algorithms'
+import { useRef } from 'react'
 
 export default function LoadBalancer(): JSX.Element {
-    const [clients, setClients] = useState<Client[]>(initialClients)
-    const [algorithm, setAlgorithm] = useState<string>('WRR')
-    const [requestIndex, setRequestIndex] = useState<number>(0)
-    const [speed, setSpeed] = useState<number>(1)
-    const [activeRequests, setActiveRequests] = useState<Request[]>([])
-    const [servers, setServers] = useState<ServerState[]>(initialServers)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            let localIndex = requestIndex
-            const newRequests: Request[] = []
-
-            clients.forEach((client, clientIndex) => {
-                for (let i = 0; i < client.rate; i++) {
-                    const serverIndex =
-                        algorithm === 'RR'
-                            ? getNextServerRR(localIndex)
-                            : getNextServerWRR(localIndex)
-
-                    const id = Date.now() + i
-                    const color =
-                        requestColors[clientIndex % requestColors.length]
-                    const weight =
-                        Math.floor(Math.random() * (1000 - 10 + 1)) + 10
-
-                    newRequests.push({
-                        id,
-                        clientIndex,
-                        serverIndex,
-                        color,
-                        phase: 'toLB',
-                        weight,
-                    })
-
-                    localIndex++
-                }
-            })
-
-            setActiveRequests((prev) => [...prev, ...newRequests])
-            setRequestIndex(localIndex)
-        }, 1000 / speed)
-
-        return () => clearInterval(interval)
-    }, [clients, algorithm, requestIndex, speed])
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setActiveRequests(
-                (prev) =>
-                    prev
-                        .map((r) =>
-                            r.phase === 'toLB'
-                                ? { ...r, phase: 'toServer' as const }
-                                : r.phase === 'toServer'
-                                  ? null
-                                  : r
-                        )
-                        .filter(Boolean) as Request[]
-            )
-        }, 1000 / speed)
-        return () => clearInterval(timer)
-    }, [speed])
+    const {
+        clients,
+        algorithm,
+        speed,
+        activeRequests,
+        servers,
+        systemMetrics,
+        setAlgorithm,
+        setSpeed,
+        adjustServerCores,
+        adjustClientRate,
+    } = useLoadBalancer(initialClients, initialServers)
 
     const getCoords = (
         type: 'client' | 'server' | 'lb',
@@ -96,22 +44,6 @@ export default function LoadBalancer(): JSX.Element {
             return { x: bounds.width - 80, y: offsetY + index * spacing }
         }
         return { x: bounds.width / 2, y: bounds.height / 2 }
-    }
-
-    const adjustServerCores = (index: number, delta: number): void => {
-        setServers((prev) => {
-            const copy = [...prev]
-            copy[index].cores = Math.max(1, copy[index].cores + delta)
-            return copy
-        })
-    }
-
-    const adjustClientRate = (index: number, delta: number): void => {
-        setClients((prev) => {
-            const copy = [...prev]
-            copy[index].rate = Math.max(1, copy[index].rate + delta)
-            return copy
-        })
     }
 
     return (
@@ -132,19 +64,27 @@ export default function LoadBalancer(): JSX.Element {
                 >
                     <ClientComponent
                         clients={clients}
-                        onAdjustClientRate={(i: number, delta: number) =>
-                            adjustClientRate(i, delta)
-                        }
+                        onAdjustClientRate={adjustClientRate}
                     />
 
                     <LB />
 
                     <ServerComponent
                         servers={servers}
-                        onAdjustCores={(i: number, delta: number) =>
-                            adjustServerCores(i, delta)
-                        }
+                        onAdjustCores={adjustServerCores}
                     />
+
+                    {/* Server Queues */}
+                    <AnimatePresence>
+                        {servers.map((server, index) => (
+                            <ServerQueue
+                                key={`queue-${server.name}`}
+                                serverIndex={index}
+                                queue={server.queue}
+                                position={getCoords('server', index)}
+                            />
+                        ))}
+                    </AnimatePresence>
 
                     {/* Request Animation */}
                     <AnimatePresence>
@@ -165,7 +105,7 @@ export default function LoadBalancer(): JSX.Element {
                                     phase === 'toLB'
                                         ? getCoords('lb')
                                         : getCoords('server', serverIndex)
-                                const size = 10 + weight / 200
+                                const size = 10 + weight / 100
                                 return (
                                     <motion.div
                                         key={`${id}-${phase}`}
@@ -184,6 +124,11 @@ export default function LoadBalancer(): JSX.Element {
                             }
                         )}
                     </AnimatePresence>
+                </div>
+
+                {/* Metrics Dashboard */}
+                <div className="mt-8">
+                    <MetricsDashboard metrics={systemMetrics} />
                 </div>
             </div>
         </TooltipProvider>

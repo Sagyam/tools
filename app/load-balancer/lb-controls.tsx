@@ -1,4 +1,7 @@
+'use client'
+
 import { algorithms } from '@/app/load-balancer/data'
+import { Button } from '@/components/ui/button'
 import {
     Select,
     SelectContent,
@@ -7,8 +10,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
-import React from 'react'
+import type React from 'react'
 
 export interface LBControlsProps {
     algorithm: string
@@ -23,10 +25,13 @@ export const LBControls: React.FC<LBControlsProps> = ({
     speed,
     setSpeed,
 }: LBControlsProps) => {
+    // Speed options from 0.25x to 2x in increments of 0.25
+    const speedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+
     return (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
             <Select defaultValue={algorithm}>
-                <SelectTrigger>
+                <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select a algorithm" />
                 </SelectTrigger>
                 <SelectContent>
@@ -44,15 +49,21 @@ export const LBControls: React.FC<LBControlsProps> = ({
                 </SelectContent>
             </Select>
 
-            <label className="font-semibold ml-8">Speed:</label>
-            <div className="w-48">
-                <Slider
-                    min={0.5}
-                    max={3}
-                    step={0.1}
-                    value={[speed]}
-                    onValueChange={([val]: number[]) => setSpeed(val)}
-                />
+            <div className="flex items-center gap-2 ml-8">
+                <label className="font-semibold">Speed:</label>
+                <div className="flex gap-1">
+                    {speedOptions.map((option) => (
+                        <Button
+                            key={option}
+                            variant={speed === option ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSpeed(option)}
+                            className="px-2 py-1 h-8"
+                        >
+                            {option}x
+                        </Button>
+                    ))}
+                </div>
             </div>
         </div>
     )

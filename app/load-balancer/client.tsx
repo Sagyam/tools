@@ -1,9 +1,12 @@
+'use client'
+
 import { mapToScale } from '@/app/load-balancer/sever'
-import { Client } from '@/app/load-balancer/types'
+import type { Client } from '@/app/load-balancer/types'
 import { Button } from '@/components/ui/button'
 import {
     Tooltip,
     TooltipContent,
+    TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
@@ -13,7 +16,7 @@ import {
     Plus,
     SmartphoneIcon,
 } from 'lucide-react'
-import React from 'react'
+import type React from 'react'
 
 export interface ClientProps {
     clients: Client[]
@@ -21,7 +24,11 @@ export interface ClientProps {
 }
 
 const getIcon = (idx: number) => {
-    const icons = [<SmartphoneIcon />, <LaptopIcon />, <ComputerIcon />]
+    const icons = [
+        <SmartphoneIcon key="smartphone" />,
+        <LaptopIcon key="laptop" />,
+        <ComputerIcon key="computer" />,
+    ]
     return icons[idx % icons.length]
 }
 
@@ -49,48 +56,54 @@ export const ClientComponent: React.FC<ClientProps> = ({
     onAdjustClientRate,
 }) => {
     return (
-        <div className="space-y-6 flex flex-col justify-center items-start">
-            {clients.map((c, i) => (
-                <Tooltip key={c.name}>
-                    <TooltipTrigger asChild>
-                        <div className="flex flex-col items-center">
-                            <div
-                                className={`flex items-center justify-center ring-2 ring-offset-2 w-12 h-12 z-0 rounded-full transition-all duration-300 ease-in-out
+        <TooltipProvider>
+            <div className="space-y-6 flex flex-col justify-center items-start">
+                {clients.map((c, i) => (
+                    <Tooltip key={c.name}>
+                        <TooltipTrigger asChild>
+                            <div className="flex flex-col items-center">
+                                <div
+                                    className={`flex items-center justify-center ring-2 ring-offset-2 w-12 h-12 z-0 rounded-full transition-all duration-300 ease-in-out
                                 ${getClientColor(c.rate)}`}
-                                style={{
-                                    scale: mapToScale(c.rate),
-                                }}
-                            >
-                                {getIcon(i)}
-                            </div>
-                            <div className="flex space-x-2 mt-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onAdjustClientRate(i, -1)}
+                                    style={{
+                                        scale: mapToScale(c.rate),
+                                    }}
                                 >
-                                    <Minus />
-                                </Button>
+                                    {getIcon(i)}
+                                </div>
+                                <div className="flex space-x-2 mt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            onAdjustClientRate(i, -1)
+                                        }
+                                    >
+                                        <Minus />
+                                    </Button>
 
-                                <div className="text-md">{c.rate} req/s</div>
+                                    <div className="text-md">
+                                        {c.rate} req/s
+                                    </div>
 
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => onAdjustClientRate(i, 1)}
-                                >
-                                    <Plus />
-                                </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => onAdjustClientRate(i, 1)}
+                                    >
+                                        <Plus />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <div className="text-md">
-                            {c.name}: {c.rate} req/s
-                        </div>
-                    </TooltipContent>
-                </Tooltip>
-            ))}
-        </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <div className="text-md">
+                                {c.name}: {c.rate} req/s
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                ))}
+            </div>
+        </TooltipProvider>
     )
 }
