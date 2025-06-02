@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Slider } from '@/components/ui/slider'
 import { Check, Trash2, TriangleAlert } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 
@@ -175,14 +174,14 @@ const BloomFilterDemo: React.FC = () => {
     }
 
     return (
-        <Card className="max-w-4xl mx-auto my-auto">
+        <Card className="w-4xl h-full p-6 space-y-4">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Bloom Filter Demonstration</CardTitle>
                 <Button
-                    variant="destructive"
+                    variant={'destructive'}
                     size="sm"
                     onClick={handleClearAll}
-                    className="flex items-center gap-2"
+                    className="bg-red-500 hover:bg-red-600 text-white"
                 >
                     <Trash2 className="h-4 w-4" /> Clear All
                 </Button>
@@ -193,28 +192,59 @@ const BloomFilterDemo: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Filter Size: {filterSize}</Label>
-                            <Slider
-                                defaultValue={[filterSize]}
+                            <Input
+                                type="number"
+                                value={filterSize}
+                                onChange={(e) => {
+                                    const newSize = parseInt(e.target.value, 10)
+                                    if (!isNaN(newSize) && newSize > 0) {
+                                        setFilterSize(newSize)
+                                        recreateBloomFilter(newSize)
+                                    }
+                                }}
+                                className="w-full"
+                                placeholder="Enter filter size"
                                 min={10}
                                 max={100}
-                                step={10}
-                                onValueChange={(value) => {
-                                    setFilterSize(value[0])
-                                    recreateBloomFilter(value[0])
-                                }}
+                                step={1}
                             />
                         </div>
                         <div className="space-y-2">
                             <Label>Hash Functions: {hashFunctions}</Label>
-                            <Slider
-                                defaultValue={[hashFunctions]}
+                            {/* <Slider */}
+                            {/*     defaultValue={[hashFunctions]} */}
+                            {/*     min={1} */}
+                            {/*     max={10} */}
+                            {/*     step={1} */}
+                            {/*     onValueChange={(value) => { */}
+                            {/*         setHashFunctions(value[0]) */}
+                            {/*         recreateBloomFilter(undefined, value[0]) */}
+                            {/*     }} */}
+                            {/* /> */}
+                            <Input
+                                type="number"
+                                value={hashFunctions}
+                                onChange={(e) => {
+                                    const newHashFunctions = parseInt(
+                                        e.target.value,
+                                        10
+                                    )
+                                    if (
+                                        !isNaN(newHashFunctions) &&
+                                        newHashFunctions > 0
+                                    ) {
+                                        setHashFunctions(newHashFunctions)
+                                        recreateBloomFilter(
+                                            undefined,
+                                            newHashFunctions
+                                        )
+                                    }
+                                }}
+                                className="w-full"
+                                placeholder="Enter number of hash functions"
                                 min={1}
                                 max={10}
                                 step={1}
-                                onValueChange={(value) => {
-                                    setHashFunctions(value[0])
-                                    recreateBloomFilter(undefined, value[0])
-                                }}
                             />
                         </div>
                     </div>
@@ -226,7 +256,12 @@ const BloomFilterDemo: React.FC = () => {
                             onChange={(e) => setInput(e.target.value)}
                             className="grow"
                         />
-                        <Button onClick={handleAddItem}>Add Item</Button>
+                        <Button
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={handleAddItem}
+                        >
+                            Add Item
+                        </Button>
                     </div>
 
                     {/* Added Items Display */}
@@ -238,7 +273,7 @@ const BloomFilterDemo: React.FC = () => {
                             {addedItems.map((item, index) => (
                                 <span
                                     key={index}
-                                    className="bg-accent px-2 py-1 rounded text-sm"
+                                    className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium border border-blue-300 dark:border-blue-600 flex items-center space-x-2"
                                 >
                                     {item}
                                 </span>
@@ -274,7 +309,12 @@ const BloomFilterDemo: React.FC = () => {
                             onChange={(e) => setCheckItem(e.target.value)}
                             className="grow"
                         />
-                        <Button onClick={handleCheckItem}>Check Item</Button>
+                        <Button
+                            className="bg-purple-500 hover:bg-purple-600 text-white"
+                            onClick={handleCheckItem}
+                        >
+                            Check Item
+                        </Button>
                     </div>
 
                     {/* Check Result and False Probability */}
@@ -300,9 +340,6 @@ const BloomFilterDemo: React.FC = () => {
                                 {falseProbability > 1 &&
                                     checkResult &&
                                     `There is a ${falseProbability.toFixed(1)}% chance I could be wrong. `}
-                                {falseProbability > 1 &&
-                                    ` As you can see above, I am kinda full right now 😫 and I make mistakes when that happens.
-                                            Now if you move that Filter Size ☝️ slider to right ➡ I can be more accurate 🎯`}
                             </AlertDescription>
                         </div>
                     )}

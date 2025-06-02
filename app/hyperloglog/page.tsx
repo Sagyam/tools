@@ -257,7 +257,6 @@ const HyperLogLogDemo = () => {
                                 onValueChange={(value) => {
                                     resetHLL(value[0])
                                 }}
-                                className="w-full bg-accent"
                             />
                         </CardContent>
                     </Card>
@@ -355,10 +354,10 @@ const HyperLogLogDemo = () => {
                                         ) => (
                                             <Card
                                                 key={index}
-                                                ref={(el) =>
-                                                    (bucketRefs.current[index] =
-                                                        el as HTMLDivElement)
-                                                }
+                                                ref={(el) => {
+                                                    bucketRefs.current[index] =
+                                                        el as HTMLDivElement
+                                                }}
                                                 className={cn(
                                                     'transition-all duration-1000 w-20 h-20',
                                                     index ===
