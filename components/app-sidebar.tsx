@@ -9,10 +9,12 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import {
+    ArrowBigRightDashIcon,
     CalculatorIcon,
     FilterIcon,
+    NetworkIcon,
+    PinIcon,
     SuperscriptIcon,
-    TelescopeIcon,
 } from 'lucide-react'
 
 // Menu items.
@@ -32,11 +34,20 @@ const items = [
         url: '/hyperloglog',
         icon: SuperscriptIcon,
     },
-
     {
-        title: 'Traciang',
-        url: '/tracing',
-        icon: TelescopeIcon,
+        title: 'Load Balancer',
+        url: '/load-balancer',
+        icon: NetworkIcon,
+    },
+    {
+        title: 'Fixed Window',
+        url: '/fixed-window',
+        icon: PinIcon,
+    },
+    {
+        title: 'Sliding Window',
+        url: '/sliding-window',
+        icon: ArrowBigRightDashIcon,
     },
 ]
 
