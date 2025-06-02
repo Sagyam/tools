@@ -1,20 +1,30 @@
 'use client'
 
+import { Card } from '@/components/ui/card'
 import { Pause, Play, RotateCcw, Send } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
-const FixedWindowRateLimiter = () => {
-    const [isRunning, setIsRunning] = useState(false)
-    const [currentTime, setCurrentTime] = useState(0)
-    const [requests, setRequests] = useState([])
-    const [windowLimit, setWindowLimit] = useState(5)
-    const [windowDuration, setWindowDuration] = useState(1000) // 1 second
-    const [servedCount, setServedCount] = useState(0)
-    const [rejectedCount, setRejectedCount] = useState(0)
+interface Request {
+    id: number
+    timestamp: number
+    status: 'served' | 'rejected'
+    windowCount?: number
+}
 
-    const intervalRef = useRef(null)
+const FixedWindowRateLimiter = () => {
+    const [isRunning, setIsRunning] = useState<boolean>(false)
+    const [currentTime, setCurrentTime] = useState<number>(0)
+    const [requests, setRequests] = useState<Request[]>([])
+    const [windowLimit, setWindowLimit] = useState<number>(5)
+    const [windowDuration, setWindowDuration] = useState<number>(3000) // Default to 1 second
+    const [servedCount, setServedCount] = useState<number>(0)
+    const [rejectedCount, setRejectedCount] = useState<number>(0)
+
+    const intervalRef = useRef<NodeJS.Timeout>(
+        null as unknown as NodeJS.Timeout
+    )
     const requestIdRef = useRef(0)
-    const startTimeRef = useRef(Date.now())
+    const startTimeRef = useRef<number>(Date.now())
 
     useEffect(() => {
         if (isRunning) {
@@ -28,11 +38,11 @@ const FixedWindowRateLimiter = () => {
         return () => clearInterval(intervalRef.current)
     }, [isRunning])
 
-    const getCurrentWindow = (time) => {
+    const getCurrentWindow = (time: number) => {
         return Math.floor(time / windowDuration)
     }
 
-    const getRequestsInCurrentWindow = (time) => {
+    const getRequestsInCurrentWindow = (time: number) => {
         const currentWindow = getCurrentWindow(time)
         const windowStart = currentWindow * windowDuration
         const windowEnd = windowStart + windowDuration
@@ -55,7 +65,7 @@ const FixedWindowRateLimiter = () => {
             timestamp: requestTime,
             status: shouldServe ? 'served' : 'rejected',
             window: getCurrentWindow(requestTime),
-        }
+        } as Request
 
         setRequests((prev) => [...prev, newRequest])
 
@@ -95,46 +105,19 @@ const FixedWindowRateLimiter = () => {
     )
 
     return (
-        <div className="p-6 max-w-6xl mx-auto bg-gray-50 min-h-screen">
-            <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="p-6 max-w-6xl mx-auto min-h-screen">
+            <div className="bg-primary rounded-lg shadow-lg p-6">
                 <h1 className="text-3xl font-bold text-center mb-2">
                     Fixed Window Counter Rate Limiter
                 </h1>
-                <p className="text-gray-600 text-center mb-6">
+                <p className="text-secondary-foreground text-center mb-6">
                     Click "Send Request" to test the rate limiter. Watch how
                     requests are served or rejected based on the window limit.
                 </p>
 
-                {/* Controls */}
-                <div className="flex flex-wrap gap-4 justify-center mb-6">
-                    <button
-                        onClick={handleToggleTimer}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                        {isRunning ? <Pause size={20} /> : <Play size={20} />}
-                        {isRunning ? 'Pause' : 'Start'} Timer
-                    </button>
-
-                    <button
-                        onClick={handleSendRequest}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                        <Send size={20} />
-                        Send Request
-                    </button>
-
-                    <button
-                        onClick={handleReset}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    >
-                        <RotateCcw size={20} />
-                        Reset
-                    </button>
-                </div>
-
                 {/* Configuration */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="bg-accent p-4 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
                             Window Limit (requests)
                         </label>
@@ -151,7 +134,7 @@ const FixedWindowRateLimiter = () => {
                             max="20"
                         />
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="bg-accent p-4 rounded-lg">
                         <label className="block text-sm font-medium mb-2">
                             Window Duration (ms)
                         </label>
@@ -188,19 +171,19 @@ const FixedWindowRateLimiter = () => {
                         </div>
                         <div className="text-sm text-red-800">Rejected</div>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-blue-600">
+                    <div className="bg-purple-50 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-purple-600">
                             {getRequestsInCurrentWindow(currentTime)}
                         </div>
-                        <div className="text-sm text-blue-800">
+                        <div className="text-sm text-purple-800">
                             Current Window
                         </div>
                     </div>
                 </div>
 
                 {/* Timeline Visualization */}
-                <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">
+                <div className="bg-stone-200 border-2 border-stone-400 rounded-lg p-4">
+                    <h3 className="text-lg text-gray-500 font-semibold mb-4">
                         Request Timeline
                     </h3>
 
@@ -312,26 +295,55 @@ const FixedWindowRateLimiter = () => {
                     {/* Legend */}
                     <div className="flex justify-center gap-6 mt-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-green-500 border-2 border-green-700 rounded"></div>
-                            <span className="text-sm">Served</span>
+                            <div className="w-4 h-4 bg-green-500 border-2 border-green-700 rounded shadow-lg"></div>
+                            <span className="text-green-500">Served</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 bg-red-500 border-2 border-red-700 rounded"></div>
-                            <span className="text-sm">Rejected</span>
+                            <span className="text-red-500">Rejected</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-blue-200 border border-blue-400 rounded"></div>
-                            <span className="text-sm">Current Window</span>
+                            <div className="w-4 h-4 bg-purple-200 border border-purple-400 rounded"></div>
+                            <span className="text-purple-500">
+                                Current Window
+                            </span>
                         </div>
                     </div>
                 </div>
 
+                {/* Controls */}
+                <div className="flex flex-wrap gap-4 justify-center my-6">
+                    <button
+                        onClick={handleToggleTimer}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        {isRunning ? <Pause size={20} /> : <Play size={20} />}
+                        {isRunning ? 'Pause' : 'Start'} Timer
+                    </button>
+
+                    <button
+                        onClick={handleSendRequest}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <Send size={20} />
+                        Send Request
+                    </button>
+
+                    <button
+                        onClick={handleReset}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
+                    >
+                        <RotateCcw size={20} />
+                        Reset
+                    </button>
+                </div>
+
                 {/* Current Status */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600">
+                <Card className="mt-6 p-4 bg-cyan-50 border border-cyan-200">
+                    <div className="text-sm text-cyan-600 space-y-1">
                         <div>
                             <strong>Current Time:</strong>{' '}
-                            {(currentTime / 1000).toFixed(2)}s
+                            {(currentTime / 1000).toFixed(1)}s
                         </div>
                         <div>
                             <strong>Current Window:</strong> Window #
@@ -339,11 +351,11 @@ const FixedWindowRateLimiter = () => {
                         </div>
                         <div>
                             <strong>Window Period:</strong>{' '}
-                            {(currentWindowStart / 1000).toFixed(2)}s -{' '}
+                            {(currentWindowStart / 1000).toFixed(1)}s -{' '}
                             {(
                                 (currentWindowStart + windowDuration) /
                                 1000
-                            ).toFixed(2)}
+                            ).toFixed(1)}
                             s
                         </div>
                         <div>
@@ -352,7 +364,7 @@ const FixedWindowRateLimiter = () => {
                             {windowLimit}
                         </div>
                     </div>
-                </div>
+                </Card>
             </div>
         </div>
     )

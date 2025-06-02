@@ -1,20 +1,30 @@
 'use client'
 
+import { Card } from '@/components/ui/card'
 import { Pause, Play, RotateCcw, Send } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
-const SlidingWindowRateLimiter = () => {
-    const [isRunning, setIsRunning] = useState(false)
-    const [currentTime, setCurrentTime] = useState(0)
-    const [requests, setRequests] = useState([])
-    const [windowLimit, setWindowLimit] = useState(5)
-    const [windowDuration, setWindowDuration] = useState(2000) // 2 seconds for better visualization
-    const [servedCount, setServedCount] = useState(0)
-    const [rejectedCount, setRejectedCount] = useState(0)
+interface Request {
+    id: number
+    timestamp: number
+    status: 'served' | 'rejected'
+    windowCount?: number
+}
 
-    const intervalRef = useRef(null)
+const SlidingWindowRateLimiter = () => {
+    const [isRunning, setIsRunning] = useState<boolean>(false)
+    const [currentTime, setCurrentTime] = useState<number>(0)
+    const [requests, setRequests] = useState<Request[]>([])
+    const [windowLimit, setWindowLimit] = useState<number>(5)
+    const [windowDuration, setWindowDuration] = useState<number>(3000)
+    const [servedCount, setServedCount] = useState<number>(0)
+    const [rejectedCount, setRejectedCount] = useState<number>(0)
+
+    const intervalRef = useRef<NodeJS.Timeout>(
+        null as unknown as NodeJS.Timeout
+    )
     const requestIdRef = useRef(0)
-    const startTimeRef = useRef(Date.now())
+    const startTimeRef = useRef<number>(Date.now())
 
     useEffect(() => {
         if (isRunning) {
@@ -28,7 +38,7 @@ const SlidingWindowRateLimiter = () => {
         return () => clearInterval(intervalRef.current)
     }, [isRunning])
 
-    const getRequestsInSlidingWindow = (time) => {
+    const getRequestsInSlidingWindow = (time: number) => {
         const windowStart = time - windowDuration
         return requests.filter(
             (req) =>
@@ -47,8 +57,8 @@ const SlidingWindowRateLimiter = () => {
             id: requestIdRef.current++,
             timestamp: requestTime,
             status: shouldServe ? 'served' : 'rejected',
-            windowCount: requestsInWindow, // Store count at time of request
-        }
+            windowCount: requestsInWindow, // Store count at the time of request
+        } as Request
 
         setRequests((prev) => [...prev, newRequest])
 
@@ -77,7 +87,7 @@ const SlidingWindowRateLimiter = () => {
 
     // Calculate display parameters
     const displayDuration = 6000 // Show 6 seconds
-    const pixelsPerMs = 600 / displayDuration // 600px width for time axis
+    const pixelsPerMs = 600 / displayDuration // 600 px width for time axis
     const timeOffset = Math.max(0, currentTime - displayDuration)
 
     // Filter visible requests
@@ -96,42 +106,15 @@ const SlidingWindowRateLimiter = () => {
 
     return (
         <div className="p-6 max-w-6xl mx-auto min-h-screen">
-            <div className="bg-accent-foreground rounded-lg shadow-lg p-6">
+            <div className="bg-primary rounded-lg shadow-lg p-6">
                 <h1 className="text-3xl font-bold text-center mb-2">
                     Sliding Window Rate Limiter
                 </h1>
-                <p className="text-gray-600 text-center mb-6">
+                <p className="text-secondary-foreground text-center mb-6">
                     Click "Send Request" to test the rate limiter. The sliding
                     window continuously moves with time, maintaining a rolling
                     count of recent requests.
                 </p>
-
-                {/* Controls */}
-                <div className="flex flex-wrap gap-4 justify-center mb-6">
-                    <button
-                        onClick={handleToggleTimer}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                        {isRunning ? <Pause size={20} /> : <Play size={20} />}
-                        {isRunning ? 'Pause' : 'Start'} Timer
-                    </button>
-
-                    <button
-                        onClick={handleSendRequest}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                        <Send size={20} />
-                        Send Request
-                    </button>
-
-                    <button
-                        onClick={handleReset}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    >
-                        <RotateCcw size={20} />
-                        Reset
-                    </button>
-                </div>
 
                 {/* Configuration */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -200,9 +183,9 @@ const SlidingWindowRateLimiter = () => {
                 </div>
 
                 {/* Timeline Visualization */}
-                <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">
-                        Request Timeline - Sliding Window View
+                <div className="bg-stone-200 border-2 border-stone-400 rounded-lg p-4">
+                    <h3 className="text-lg text-gray-500 font-semibold mb-4">
+                        Request Timeline
                     </h3>
 
                     <div
@@ -314,7 +297,7 @@ const SlidingWindowRateLimiter = () => {
                                     }}
                                     title={`${isServed ? 'Served' : 'Rejected'} at ${request.timestamp}ms${isInCurrentWindow ? ' (In Window)' : ''}`}
                                 >
-                                    {/* Highlight requests in current window */}
+                                    {/* Highlight requests in the current window */}
                                     {isInCurrentWindow && isServed && (
                                         <div className="absolute -inset-1 bg-purple-400 rounded opacity-30 animate-pulse"></div>
                                     )}
@@ -352,7 +335,7 @@ const SlidingWindowRateLimiter = () => {
                                 return (
                                     <div
                                         key={i}
-                                        className="absolute text-xs text-gray-600"
+                                        className="absolute text-md font-medium text-gray-500"
                                         style={{
                                             left: `${(time - timeOffset) * pixelsPerMs}px`,
                                         }}
@@ -383,19 +366,46 @@ const SlidingWindowRateLimiter = () => {
                     </div>
                 </div>
 
+                {/* Controls */}
+                <div className="flex flex-wrap gap-4 justify-center my-6">
+                    <button
+                        onClick={handleToggleTimer}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        {isRunning ? <Pause size={20} /> : <Play size={20} />}
+                        {isRunning ? 'Pause' : 'Start'} Timer
+                    </button>
+
+                    <button
+                        onClick={handleSendRequest}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        <Send size={20} />
+                        Send Request
+                    </button>
+
+                    <button
+                        onClick={handleReset}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
+                    >
+                        <RotateCcw size={20} />
+                        Reset
+                    </button>
+                </div>
+
                 {/* Current Status */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600 space-y-1">
+                <Card className="mt-6 p-4 bg-cyan-50 border border-cyan-200">
+                    <div className="text-sm text-cyan-600 space-y-1">
                         <div>
                             <strong>Current Time:</strong>{' '}
-                            {(currentTime / 1000).toFixed(2)}s
+                            {(currentTime / 1000).toFixed(1)}s
                         </div>
                         <div>
                             <strong>Window Range:</strong>{' '}
                             {(
                                 Math.max(0, currentTime - windowDuration) / 1000
-                            ).toFixed(2)}
-                            s - {(currentTime / 1000).toFixed(2)}s
+                            ).toFixed(1)}
+                            s - {(currentTime / 1000).toFixed(1)}s
                         </div>
                         <div>
                             <strong>Window Duration:</strong>{' '}
@@ -407,23 +417,23 @@ const SlidingWindowRateLimiter = () => {
                             {windowLimit}
                         </div>
                         {currentWindowRequests.length > 0 && (
-                            <div className="mt-2">
+                            <div className="mt-2 transition-all duration-300">
                                 <strong>Active Window Requests:</strong>
-                                <div className="text-xs text-purple-600 mt-1">
+                                <div className="text-xl text-green-600 font-bold mt-1">
                                     {currentWindowRequests
                                         .map(
                                             (req) =>
-                                                `${(req.timestamp / 1000).toFixed(2)}s`
+                                                `${(req.timestamp / 1000).toFixed(1)}s`
                                         )
                                         .join(', ')}
                                 </div>
                             </div>
                         )}
                     </div>
-                </div>
+                </Card>
 
                 {/* Algorithm Explanation */}
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <Card className="mt-6 p-4 bg-blue-50 border border-blue-200">
                     <h4 className="font-semibold text-blue-800 mb-2">
                         How Sliding Window Works:
                     </h4>
@@ -449,7 +459,7 @@ const SlidingWindowRateLimiter = () => {
                             smoothly over time
                         </li>
                     </ul>
-                </div>
+                </Card>
             </div>
         </div>
     )
