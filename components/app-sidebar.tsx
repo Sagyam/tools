@@ -10,7 +10,10 @@ import {
 } from '@/components/ui/sidebar'
 import {
     ArrowBigRightDashIcon,
+    AudioWaveformIcon,
     CalculatorIcon,
+    CoinsIcon,
+    DropletIcon,
     FilterIcon,
     NetworkIcon,
     PinIcon,
@@ -30,6 +33,11 @@ const items = [
         icon: FilterIcon,
     },
     {
+        title: 'Count-Min Sketch',
+        url: '/count-min-sketch',
+        icon: AudioWaveformIcon,
+    },
+    {
         title: 'HyperLogLog',
         url: '/hyperloglog',
         icon: SuperscriptIcon,
@@ -38,6 +46,16 @@ const items = [
         title: 'Load Balancer',
         url: '/load-balancer',
         icon: NetworkIcon,
+    },
+    {
+        title: 'Token Bucket',
+        url: '/token-bucket',
+        icon: CoinsIcon,
+    },
+    {
+        title: 'Leaky Bucket',
+        url: '/leaky-bucket',
+        icon: DropletIcon,
     },
     {
         title: 'Fixed Window',
