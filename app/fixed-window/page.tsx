@@ -1,6 +1,9 @@
 'use client'
 
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Pause, Play, RotateCcw, Send } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
@@ -105,8 +108,8 @@ const FixedWindowRateLimiter = () => {
     )
 
     return (
-        <div className="p-6 max-w-6xl mx-auto min-h-screen">
-            <div className="bg-primary rounded-lg shadow-lg p-6">
+        <div className="min-h-screen bg-background flex items-start justify-center">
+            <div className="max-w-6xl">
                 <h1 className="text-3xl font-bold text-center mb-2">
                     Fixed Window Counter Rate Limiter
                 </h1>
@@ -116,73 +119,96 @@ const FixedWindowRateLimiter = () => {
                 </p>
 
                 {/* Configuration */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="bg-accent p-4 rounded-lg">
-                        <label className="block text-sm font-medium mb-2">
-                            Window Limit (requests)
-                        </label>
-                        <input
-                            type="number"
-                            value={windowLimit}
-                            onChange={(e) =>
-                                setWindowLimit(
-                                    Math.max(1, parseInt(e.target.value) || 1)
-                                )
-                            }
-                            className="w-full px-3 py-2 border rounded-lg"
-                            min="1"
-                            max="20"
-                        />
-                    </div>
-                    <div className="bg-accent p-4 rounded-lg">
-                        <label className="block text-sm font-medium mb-2">
-                            Window Duration (ms)
-                        </label>
-                        <input
-                            type="number"
-                            value={windowDuration}
-                            onChange={(e) =>
-                                setWindowDuration(
-                                    Math.max(
-                                        500,
-                                        parseInt(e.target.value) || 1000
+                <div className="bg-gray-800 rounded-lg shadow-lg my-4 p-8">
+                    <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <Label className="block text-sm font-medium mb-2">
+                                Window Limit (requests)
+                            </Label>
+                            <Input
+                                type="number"
+                                value={windowLimit}
+                                onChange={(e) =>
+                                    setWindowLimit(
+                                        Math.max(
+                                            1,
+                                            parseInt(e.target.value) || 1
+                                        )
                                     )
-                                )
-                            }
-                            className="w-full px-3 py-2 border rounded-lg"
-                            min="500"
-                            max="5000"
-                            step="100"
-                        />
+                                }
+                                className="w-full px-3 py-2 border rounded-lg"
+                                min="1"
+                                max="20"
+                            />
+                            <span className="text-sm text-gray-400">
+                                {windowLimit} requests per window
+                            </span>
+                        </div>
+                        <div>
+                            <Label className="block text-sm font-medium mb-2">
+                                Window Duration (ms)
+                            </Label>
+                            <Input
+                                type="number"
+                                value={windowDuration}
+                                onChange={(e) =>
+                                    setWindowDuration(
+                                        Math.max(
+                                            500,
+                                            parseInt(e.target.value) || 1000
+                                        )
+                                    )
+                                }
+                                className="w-full px-3 py-2 border rounded-lg"
+                                min="500"
+                                max="5000"
+                                step="100"
+                            />
+                            <span className="text-sm text-gray-400">
+                                {windowDuration} ms per window
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                            {servedCount}
-                        </div>
-                        <div className="text-sm text-green-800">Served</div>
-                    </div>
-                    <div className="bg-red-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                            {rejectedCount}
-                        </div>
-                        <div className="text-sm text-red-800">Rejected</div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                            {getRequestsInCurrentWindow(currentTime)}
-                        </div>
-                        <div className="text-sm text-purple-800">
-                            Current Window
-                        </div>
+                    {/* Controls */}
+                    <div className="flex items-center justify-start my-4 gap-x-4">
+                        <Button
+                            onClick={handleToggleTimer}
+                            className={`w-full px-4 py-2 rounded-lg font-medium transition-colors
+                                 ${
+                                     isRunning
+                                         ? 'bg-yellow-600 hover:bg-yellow-700'
+                                         : 'bg-green-600 hover:bg-green-700'
+                                 }`}
+                        >
+                            {isRunning ? (
+                                <Pause size={20} />
+                            ) : (
+                                <Play size={20} />
+                            )}
+                            {isRunning ? 'Pause' : 'Start'} Timer
+                        </Button>
+
+                        <Button
+                            onClick={handleSendRequest}
+                            className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
+                        >
+                            <Send size={20} />
+                            Send Request
+                        </Button>
+
+                        <Button
+                            onClick={handleReset}
+                            className="w-full items-center gap-2 px-4 py-2 bg-rose-500 rounded-lg hover:bg-rose-600 transition-colors"
+                        >
+                            <RotateCcw size={20} />
+                            Reset
+                        </Button>
                     </div>
                 </div>
 
                 {/* Timeline Visualization */}
-                <div className="bg-stone-200 border-2 border-stone-400 rounded-lg p-4">
+                <div className="bg-gray-800 border-2 rounded-lg p-4">
                     <h3 className="text-lg text-gray-500 font-semibold mb-4">
                         Request Timeline
                     </h3>
@@ -280,7 +306,7 @@ const FixedWindowRateLimiter = () => {
                                 return (
                                     <div
                                         key={i}
-                                        className="absolute text-xs text-gray-600"
+                                        className="absolute text-md font-semibold"
                                         style={{
                                             left: `${(time - timeOffset) * pixelsPerMs}px`,
                                         }}
@@ -311,60 +337,33 @@ const FixedWindowRateLimiter = () => {
                     </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex flex-wrap gap-4 justify-center my-6">
-                    <button
-                        onClick={handleToggleTimer}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                        {isRunning ? <Pause size={20} /> : <Play size={20} />}
-                        {isRunning ? 'Pause' : 'Start'} Timer
-                    </button>
-
-                    <button
-                        onClick={handleSendRequest}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                        <Send size={20} />
-                        Send Request
-                    </button>
-
-                    <button
-                        onClick={handleReset}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
-                    >
-                        <RotateCcw size={20} />
-                        Reset
-                    </button>
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 my-4">
+                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                            {servedCount}
+                        </div>
+                        <div className="text-md font-semibold text-green-800">
+                            Served
+                        </div>
+                    </Card>
+                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                            {rejectedCount}
+                        </div>
+                        <div className="text-md font-semibold text-red-800">
+                            Rejected
+                        </div>
+                    </Card>
+                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                            {getRequestsInCurrentWindow(currentTime)}
+                        </div>
+                        <div className="text-md font-semibold text-purple-800">
+                            Current Window
+                        </div>
+                    </Card>
                 </div>
-
-                {/* Current Status */}
-                <Card className="mt-6 p-4 bg-cyan-50 border border-cyan-200">
-                    <div className="text-sm text-cyan-600 space-y-1">
-                        <div>
-                            <strong>Current Time:</strong>{' '}
-                            {(currentTime / 1000).toFixed(1)}s
-                        </div>
-                        <div>
-                            <strong>Current Window:</strong> Window #
-                            {getCurrentWindow(currentTime)}
-                        </div>
-                        <div>
-                            <strong>Window Period:</strong>{' '}
-                            {(currentWindowStart / 1000).toFixed(1)}s -{' '}
-                            {(
-                                (currentWindowStart + windowDuration) /
-                                1000
-                            ).toFixed(1)}
-                            s
-                        </div>
-                        <div>
-                            <strong>Requests in Current Window:</strong>{' '}
-                            {getRequestsInCurrentWindow(currentTime)} /{' '}
-                            {windowLimit}
-                        </div>
-                    </div>
-                </Card>
             </div>
         </div>
     )
