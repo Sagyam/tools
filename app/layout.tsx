@@ -2,6 +2,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
+import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import './globals.css'
 import { Raleway } from 'next/font/google'
@@ -35,6 +36,7 @@ export default async function RootLayout({
                     >
                         <SidebarTrigger />
                         {children}
+                        <Analytics />
                         <Toaster />
                     </ThemeProvider>
                 </SidebarProvider>
