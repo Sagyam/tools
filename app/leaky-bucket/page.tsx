@@ -201,6 +201,14 @@ const LeakyBucketSimulator = () => {
 
                         <div className="flex items-center justify-center gap-x-4">
                             <Button
+                                onClick={sendRequest}
+                                className="w-fit bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
+                            >
+                                <Send size={20} />
+                                Send Request
+                            </Button>
+
+                            <Button
                                 onClick={() => setIsRunning(!isRunning)}
                                 className={`w-24 px-4 py-2 rounded-lg font-medium ${
                                     isRunning
@@ -217,14 +225,6 @@ const LeakyBucketSimulator = () => {
                             </Button>
 
                             <Button
-                                onClick={sendRequest}
-                                className="w-fit bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
-                            >
-                                <Send size={20} />
-                                Send Request
-                            </Button>
-
-                            <Button
                                 onClick={reset}
                                 className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-md transition-colors"
                             >
@@ -237,7 +237,7 @@ const LeakyBucketSimulator = () => {
 
                 {/* Animation Container */}
                 <Card
-                    className="bg-primary rounded-lg shadow-lg my-4 p-8"
+                    className="bg-primary relative rounded-lg shadow-lg my-4 p-8"
                     style={{ height: '500px' }}
                 >
                     <div className="relative h-full flex items-center justify-between">
@@ -267,6 +267,7 @@ const LeakyBucketSimulator = () => {
                                 />
                             )
                         })}
+
                         {/* Bucket */}
                         <div className="flex flex-col items-center">
                             <div className="relative w-24 h-32 border-4 border-gray-400 rounded-b-lg overflow-hidden mb-2">
@@ -359,6 +360,29 @@ const LeakyBucketSimulator = () => {
                             </div>
                             <span className="text-md font-semibold">
                                 {fillRate} req/s
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="absolute bottom-4 right-4 bg-secondary bg-opacity-50 rounded-lg p-3 text-sm">
+                        <div className="font-semibold mb-2 text-white">
+                            Request Status:
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                            <span className="text-white">Moving to Bucket</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                            <span className="text-white">
+                                Accepted & Processed
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                            <span className="text-white">
+                                Dropped (No Tokens)
                             </span>
                         </div>
                     </div>

@@ -4,29 +4,142 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RotateCcw, Send, Server, User, Zap } from 'lucide-react'
+import { Pause, Play, RotateCcw, Send, Server, User, Zap } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+
+enum RequestStatus {
+    Moving = 'moving',
+    Accepted = 'accepted',
+    Completed = 'completed',
+    Dropped = 'dropped',
+    Fading = 'fading',
+}
 
 interface Request {
     id: number
-    status: 'moving' | 'accepted' | 'completed' | 'dropped' | 'dropped-complete'
+    status: RequestStatus
     x: number // position on the x-axis (0-100%)
     timestamp: number // time when request was created
+}
+
+interface Token {
+    id: number
+    isVisible: boolean
+    isAnimating: boolean
 }
 
 const TokenBucketRateLimiter = () => {
     const [bucketCapacity, setBucketCapacity] = useState(5)
     const [refillRate, setRefillRate] = useState(1)
     const [currentTokens, setCurrentTokens] = useState(5)
+    const [tokens, setTokens] = useState<Token[]>([])
     const [requests, setRequests] = useState<Request[]>([])
     const [stats, setStats] = useState({ processed: 0, dropped: 0 })
     const [isRunning, setIsRunning] = useState(true)
 
     const requestIdRef = useRef(0)
+    const tokenIdRef = useRef(0)
     const intervalRef = useRef<NodeJS.Timeout>(
         null as unknown as NodeJS.Timeout
     )
     const containerRef = useRef(null)
+
+    // Initialize tokens with animation support
+    useEffect(() => {
+        const initialTokens = Array.from({ length: bucketCapacity }, () => ({
+            id: tokenIdRef.current++,
+            isVisible: true,
+            isAnimating: false,
+        }))
+        setTokens(initialTokens)
+    }, [bucketCapacity])
+
+    // Update tokens when currentTokens changes
+    useEffect(() => {
+        setTokens((prevTokens) => {
+            const newTokens = [...prevTokens]
+            const currentVisibleCount = newTokens.filter(
+                (t) => t.isVisible
+            ).length
+
+            if (currentTokens > currentVisibleCount) {
+                // Add tokens with animation
+                const tokensToAdd = currentTokens - currentVisibleCount
+                for (let i = 0; i < tokensToAdd; i++) {
+                    const hiddenTokenIndex = newTokens.findIndex(
+                        (t) => !t.isVisible
+                    )
+                    if (hiddenTokenIndex !== -1) {
+                        newTokens[hiddenTokenIndex] = {
+                            ...newTokens[hiddenTokenIndex],
+                            isVisible: true,
+                            isAnimating: true,
+                        }
+                        // Remove animation flag after animation completes
+                        setTimeout(() => {
+                            setTokens((prev) =>
+                                prev.map((t) =>
+                                    t.id === newTokens[hiddenTokenIndex].id
+                                        ? { ...t, isAnimating: false }
+                                        : t
+                                )
+                            )
+                        }, 300)
+                    } else {
+                        // Create new token if none available
+                        newTokens.push({
+                            id: tokenIdRef.current++,
+                            isVisible: true,
+                            isAnimating: true,
+                        })
+                        // Remove an animation flag after animation completes
+                        setTimeout(() => {
+                            setTokens((prev) =>
+                                prev.map((t) =>
+                                    t.id === tokenIdRef.current - 1
+                                        ? { ...t, isAnimating: false }
+                                        : t
+                                )
+                            )
+                        }, 300)
+                    }
+                }
+            } else if (currentTokens < currentVisibleCount) {
+                // Remove tokens with animation
+                const tokensToRemove = currentVisibleCount - currentTokens
+                let removed = 0
+                for (
+                    let i = newTokens.length - 1;
+                    i >= 0 && removed < tokensToRemove;
+                    i--
+                ) {
+                    if (newTokens[i].isVisible) {
+                        newTokens[i] = {
+                            ...newTokens[i],
+                            isAnimating: true,
+                        }
+                        // Hide token after animation
+                        setTimeout(() => {
+                            setTokens((prev) =>
+                                prev.map((t) =>
+                                    t.id === newTokens[i].id
+                                        ? {
+                                              ...t,
+                                              isVisible: false,
+                                              isAnimating: false,
+                                          }
+                                        : t
+                                )
+                            )
+                        }, 300)
+                        removed++
+                    }
+                }
+            }
+
+            return newTokens
+        })
+    }, [currentTokens])
 
     // Refill tokens at a specified rate
     useEffect(() => {
@@ -41,17 +154,27 @@ const TokenBucketRateLimiter = () => {
         return () => clearInterval(intervalRef.current)
     }, [refillRate, bucketCapacity, isRunning])
 
-    // Clean up completed requests
+    // Clean up completed requests with fade out
     useEffect(() => {
         const cleanup = setInterval(() => {
-            setRequests((prev) =>
-                prev.filter(
-                    (req) =>
-                        req.status !== 'completed' &&
-                        req.status !== 'dropped-complete'
-                )
-            )
-        }, 1000)
+            setRequests((prev) => {
+                const updated = prev.map((req: Request) => {
+                    if (req.status === 'completed') {
+                        return { ...req, status: RequestStatus.Fading }
+                    }
+                    return req
+                })
+
+                // Remove fading requests after fade animation
+                setTimeout(() => {
+                    setRequests((current) =>
+                        current.filter((req) => req.status !== 'fading')
+                    )
+                }, 500)
+
+                return updated
+            })
+        }, 1500)
 
         return () => clearInterval(cleanup)
     }, [])
@@ -79,43 +202,47 @@ const TokenBucketRateLimiter = () => {
     const processRequest = (requestId: number) => {
         setCurrentTokens((prev) => {
             if (prev > 0) {
+                // Token available - accept the request
                 setStats((s) => ({ ...s, processed: s.processed + 1 }))
                 setRequests((r) =>
                     r.map((req) =>
                         req.id === requestId
-                            ? { ...req, status: 'accepted' }
+                            ? { ...req, status: RequestStatus.Accepted, x: 85 }
                             : req
                     )
                 )
+                // Complete the request after reaching server
                 setTimeout(() => {
                     setRequests((r) =>
                         r.map((req) =>
                             req.id === requestId
-                                ? { ...req, status: 'completed' }
+                                ? { ...req, status: RequestStatus.Completed }
                                 : req
                         )
                     )
                 }, 1000)
                 return prev - 1
             } else {
+                // No tokens available - drop the request at the bucket
                 setStats((s) => ({ ...s, dropped: s.dropped + 1 }))
                 setRequests((r) =>
                     r.map((req) =>
                         req.id === requestId
-                            ? { ...req, status: 'dropped' }
+                            ? { ...req, status: RequestStatus.Dropped, x: 50 } // Stay at bucket position
                             : req
                     )
                 )
+                // Start fade out immediately for dropped requests
                 setTimeout(() => {
                     setRequests((r) =>
                         r.map((req) =>
                             req.id === requestId
-                                ? { ...req, status: 'dropped-complete' }
+                                ? { ...req, status: RequestStatus.Fading }
                                 : req
                         )
                     )
-                }, 1000)
-                return prev // don't decrement below 0
+                }, 800) // Short delay to show the red state
+                return prev
             }
         })
     }
@@ -155,14 +282,14 @@ const TokenBucketRateLimiter = () => {
                             <Input
                                 type="number"
                                 min="1"
-                                max="10"
+                                max="15"
                                 value={bucketCapacity}
                                 onChange={(e) =>
                                     setBucketCapacity(parseInt(e.target.value))
                                 }
                                 className="w-full px-3 py-2 border rounded-lg"
                             />
-                            <span className="text-sm text-gray-400">
+                            <span className="text-sm text-primary-foreground">
                                 {bucketCapacity} tokens
                             </span>
                         </div>
@@ -180,7 +307,7 @@ const TokenBucketRateLimiter = () => {
                                 }
                                 className="w-full px-3 py-2 border rounded-lg"
                             />
-                            <span className="text-sm text-gray-400">
+                            <span className="text-sm text-primary-foreground">
                                 {refillRate}/second
                             </span>
                         </div>
@@ -202,6 +329,11 @@ const TokenBucketRateLimiter = () => {
                                          : 'bg-green-600 hover:bg-green-700'
                                  }`}
                             >
+                                {isRunning ? (
+                                    <Pause size={16} />
+                                ) : (
+                                    <Play size={16} />
+                                )}
                                 {isRunning ? 'Pause' : 'Resume'}
                             </Button>
 
@@ -238,19 +370,28 @@ const TokenBucketRateLimiter = () => {
                         <div className="relative">
                             <div className="w-32 h-48 border-4 border-red-400 rounded-lg bg-primary relative overflow-hidden">
                                 <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center items-end p-2">
-                                    {Array.from(
-                                        { length: currentTokens },
-                                        (_, i) => (
-                                            <div
-                                                key={i}
-                                                className="w-6 h-6 bg-green-400 transform rotate-45 m-1 animate-pulse"
-                                                style={{
-                                                    animationDelay: `${i * 0.1}s`,
-                                                    animationDuration: '2s',
-                                                }}
-                                            />
-                                        )
-                                    )}
+                                    {tokens.map((token, i) => (
+                                        <div
+                                            key={token.id}
+                                            className={`w-6 h-6 bg-green-400 transform rotate-45 m-1 transition-all duration-300 ease-in-out ${
+                                                token.isVisible
+                                                    ? 'opacity-100 scale-100'
+                                                    : 'opacity-0 scale-0'
+                                            } ${
+                                                token.isAnimating &&
+                                                token.isVisible
+                                                    ? 'animate-bounce'
+                                                    : ''
+                                            }`}
+                                            style={{
+                                                animationDelay: `${i * 0.1}s`,
+                                                animationDuration:
+                                                    token.isAnimating
+                                                        ? '0.6s'
+                                                        : '2s',
+                                            }}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                             <div className="text-center mt-2 text-md">
@@ -271,38 +412,57 @@ const TokenBucketRateLimiter = () => {
                     {requests.map((request) => (
                         <div
                             key={request.id}
-                            className={`absolute top-1/2 transform -translate-y-1/2 transition-all duration-1000 ease-in-out ${
-                                request.status === 'dropped'
-                                    ? 'animate-bounce'
-                                    : ''
+                            className={`absolute transition-all duration-1000 ease-in-out ${
+                                request.status === 'fading'
+                                    ? 'opacity-0 transition-opacity duration-500'
+                                    : 'opacity-100'
                             }`}
                             style={{
                                 left: `${request.x}%`,
                                 top:
                                     request.status === 'dropped'
-                                        ? '400px'
-                                        : request.status === 'accepted'
-                                          ? '120px'
-                                          : '50%',
-                                transform:
-                                    request.status === 'moving'
-                                        ? 'translateY(-50%)'
-                                        : 'none',
+                                        ? '65%' // Position dropped requests below the bucket
+                                        : '50%',
+                                transform: 'translate(-50%, -50%)',
                             }}
                         >
                             <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                                    request.status === 'accepted'
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-colors duration-300 ${
+                                    request.status === 'accepted' ||
+                                    request.status === 'completed'
                                         ? 'bg-green-500'
                                         : request.status === 'dropped'
-                                          ? 'bg-red-500'
+                                          ? 'bg-red-500 animate-pulse'
                                           : 'bg-blue-500'
                                 }`}
                             >
-                                R
+                                {request.status === 'dropped' ? '✕' : 'R'}
                             </div>
                         </div>
                     ))}
+
+                    {/* Legend */}
+                    <div className="absolute bottom-4 right-4 bg-secondary bg-opacity-50 rounded-lg p-3 text-sm">
+                        <div className="font-semibold mb-2 text-white">
+                            Request Status:
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                            <span className="text-white">Moving to Bucket</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                            <span className="text-white">
+                                Accepted & Processed
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                            <span className="text-white">
+                                Dropped (No Tokens)
+                            </span>
+                        </div>
+                    </div>
                 </Card>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
