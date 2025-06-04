@@ -15,9 +15,9 @@ interface Request {
 
 const LeakyBucketSimulator = () => {
     const [bucketSize, setBucketSize] = useState<number>(10)
-    const [fillRate, setFillRate] = useState<number>(2) // requests per second
+    const [fillRate, setFillRate] = useState<number>(1) // requests per second
     const [bucket, setBucket] = useState<Request[]>([])
-    const [isRunning, setIsRunning] = useState<boolean>(false)
+    const [isRunning, setIsRunning] = useState<boolean>(true)
     const [stats, setStats] = useState({
         totalRequests: 0,
         processedRequests: 0,
@@ -307,7 +307,7 @@ const LeakyBucketSimulator = () => {
                                     )}
                                 </div>
                             </div>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm">
                                 Bucket ({bucket.length}/{bucketSize})
                             </span>
                         </div>

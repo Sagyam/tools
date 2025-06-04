@@ -29,8 +29,8 @@ interface Token {
 }
 
 const TokenBucketRateLimiter = () => {
-    const [bucketCapacity, setBucketCapacity] = useState(5)
-    const [refillRate, setRefillRate] = useState(1)
+    const [bucketCapacity, setBucketCapacity] = useState(15)
+    const [refillRate, setRefillRate] = useState(3)
     const [currentTokens, setCurrentTokens] = useState(5)
     const [tokens, setTokens] = useState<Token[]>([])
     const [requests, setRequests] = useState<Request[]>([])
@@ -159,7 +159,7 @@ const TokenBucketRateLimiter = () => {
         const cleanup = setInterval(() => {
             setRequests((prev) => {
                 const updated = prev.map((req: Request) => {
-                    if (req.status === 'completed') {
+                    if (req.status === RequestStatus.Completed) {
                         return { ...req, status: RequestStatus.Fading }
                     }
                     return req
@@ -180,12 +180,12 @@ const TokenBucketRateLimiter = () => {
     }, [])
 
     const createRequest = () => {
-        const newRequest = {
+        const newRequest: Request = {
             id: requestIdRef.current++,
-            status: 'moving',
+            status: RequestStatus.Moving,
             x: 0,
             timestamp: Date.now(),
-        } as Request
+        }
 
         setRequests((prev) => [...prev, newRequest])
 
@@ -241,7 +241,7 @@ const TokenBucketRateLimiter = () => {
                                 : req
                         )
                     )
-                }, 800) // Short delay to show the red state
+                }, 500) // Short delay to show the red state
                 return prev
             }
         })
@@ -361,11 +361,11 @@ const TokenBucketRateLimiter = () => {
                     </div>
 
                     <div className="absolute left-1/2 top-16 transform -translate-x-1/2">
-                        <div className="text-center mb-4">
+                        <div className="text-left mb-4">
                             <div className="text-sm mb-2">
                                 Tokens are added at fixed rate
                             </div>
-                            <Zap className="mx-auto text-green-400" size={24} />
+                            <Zap className="ml-12 text-green-400" size={24} />
                         </div>
                         <div className="relative">
                             <div className="w-32 h-48 border-4 border-red-400 rounded-lg bg-primary relative overflow-hidden">
@@ -402,7 +402,7 @@ const TokenBucketRateLimiter = () => {
                         </div>
                     </div>
 
-                    <div className="absolute right-8 top-1/2 text-center">
+                    <div className="absolute right-8 top-1/3 text-center">
                         <div className="w-16 h-16 bg-green-500 rounded-lg flex items-center justify-center mb-2">
                             <Server size={32} />
                         </div>
@@ -436,7 +436,7 @@ const TokenBucketRateLimiter = () => {
                                           : 'bg-blue-500'
                                 }`}
                             >
-                                {request.status === 'dropped' ? '✕' : 'R'}
+                                {request.status === 'dropped' ? 'X' : 'R'}
                             </div>
                         </div>
                     ))}
