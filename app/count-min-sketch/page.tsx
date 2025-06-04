@@ -104,7 +104,7 @@ const CountMinSketchDemo: React.FC = () => {
     const [highlightedCells, setHighlightedCells] = useState<HighlightedCell[]>(
         []
     )
-    const [speed, setSpeed] = useState<number>(0)
+    const [speed, setSpeed] = useState<number>(150)
     const [recentItems, setRecentItems] = useState<
         Array<{ item: string; id: number; timestamp: number }>
     >([])
