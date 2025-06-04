@@ -1,32 +1,50 @@
 'use client'
 
-import { Pause, Play, RotateCcw, Settings } from 'lucide-react'
-import React, { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Pause, Play, RotateCcw } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+
+type Item = string
+
+interface HighlightedCell {
+    row: number
+    col: number
+}
+
+interface DataStreamItem {
+    item: Item
+    id: number
+}
+
+interface ExactCounts {
+    [key: string]: number
+}
 
 // Simple hash functions for Count-Min Sketch
 const hashFunctions = [
-    (item, width) => {
+    (item: Item, width: number): number => {
         let hash = 0
         for (let i = 0; i < item.length; i++) {
             hash = ((hash << 5) - hash + item.charCodeAt(i)) & 0xffffffff
         }
         return Math.abs(hash) % width
     },
-    (item, width) => {
+    (item: Item, width: number): number => {
         let hash = 5381
         for (let i = 0; i < item.length; i++) {
             hash = ((hash << 5) + hash + item.charCodeAt(i)) & 0xffffffff
         }
         return Math.abs(hash) % width
     },
-    (item, width) => {
+    (item: Item, width: number): number => {
         let hash = 0
         for (let i = 0; i < item.length; i++) {
             hash = hash * 31 + item.charCodeAt(i)
         }
         return Math.abs(hash) % width
     },
-    (item, width) => {
+    (item: Item, width: number): number => {
         let hash = 2166136261
         for (let i = 0; i < item.length; i++) {
             hash ^= item.charCodeAt(i)
@@ -37,17 +55,22 @@ const hashFunctions = [
 ]
 
 class CountMinSketch {
-    constructor(width = 20, depth = 4) {
+    width: number
+    depth: number
+    table: number[][]
+    hashFunctions: ((item: Item, width: number) => number)[]
+
+    constructor(width: number = 20, depth: number = 4) {
         this.width = width
         this.depth = depth
         this.table = Array(depth)
-            .fill()
+            .fill(null)
             .map(() => Array(width).fill(0))
         this.hashFunctions = hashFunctions.slice(0, depth)
     }
 
-    add(item) {
-        const positions = []
+    add(item: Item): HighlightedCell[] {
+        const positions: HighlightedCell[] = []
         for (let i = 0; i < this.depth; i++) {
             const pos = this.hashFunctions[i](item, this.width)
             this.table[i][pos]++
@@ -56,7 +79,7 @@ class CountMinSketch {
         return positions
     }
 
-    query(item) {
+    query(item: Item): number {
         let minCount = Infinity
         for (let i = 0; i < this.depth; i++) {
             const pos = this.hashFunctions[i](item, this.width)
@@ -65,43 +88,79 @@ class CountMinSketch {
         return minCount
     }
 
-    reset() {
+    reset(): void {
         this.table = Array(this.depth)
-            .fill()
+            .fill(null)
             .map(() => Array(this.width).fill(0))
     }
 }
 
-const CountMinSketchDemo = () => {
-    const [cms, setCms] = useState(new CountMinSketch(20, 4))
-    const [exactCounts, setExactCounts] = useState({})
-    const [isPlaying, setIsPlaying] = useState(false)
-    const [dataStream, setDataStream] = useState([])
-    const [currentItem, setCurrentItem] = useState('')
-    const [highlightedCells, setHighlightedCells] = useState([])
-    const [speed, setSpeed] = useState(500)
-    const [showSettings, setShowSettings] = useState(false)
+const CountMinSketchDemo: React.FC = () => {
+    const [cms, setCms] = useState<CountMinSketch>(new CountMinSketch(20, 4))
+    const [exactCounts, setExactCounts] = useState<ExactCounts>({})
+    const [isPlaying, setIsPlaying] = useState<boolean>(false)
+    const [dataStream, setDataStream] = useState<DataStreamItem[]>([])
+    const [currentItem, setCurrentItem] = useState<string>('')
+    const [highlightedCells, setHighlightedCells] = useState<HighlightedCell[]>(
+        []
+    )
+    const [speed, setSpeed] = useState<number>(0)
+    const [recentItems, setRecentItems] = useState<
+        Array<{ item: string; id: number; timestamp: number }>
+    >([])
+    const streamContainerRef = useRef<HTMLDivElement>(null)
 
-    // Available fruits for random selection
-    const availableFruits = [
-        'apple',
-        'banana',
-        'cherry',
-        'date',
-        'elderberry',
-        'fig',
-        'grape',
-        'kiwi',
-        'lemon',
-        'mango',
-        'orange',
-        'papaya',
-        'quince',
-        'raspberry',
-        'strawberry',
+    // Available fruits for random selection with emojis
+    const availableFruits: Array<{ name: string; emoji: string }> = [
+        { name: 'apple', emoji: '🍎' },
+        { name: 'banana', emoji: '🍌' },
+        { name: 'cherry', emoji: '🍒' },
+        { name: 'coconut', emoji: '🥥' },
+        { name: 'date', emoji: '🌴' },
+        { name: 'elderberry', emoji: '🫐' },
+        { name: 'fig', emoji: '🌰' },
+        { name: 'grape', emoji: '🍇' },
+        { name: 'kiwi', emoji: '🥝' },
+        { name: 'lemon', emoji: '🍋' },
+        { name: 'mango', emoji: '🥭' },
+        { name: 'melon', emoji: '🍈' },
+        { name: 'orange', emoji: '🍊' },
+        { name: 'peach', emoji: '🍑' },
+        { name: 'pineapple', emoji: '🍍' },
+        { name: 'tangerine', emoji: '🍊' },
+        { name: 'quince', emoji: '🍐' },
+        { name: 'strawberry', emoji: '🍓' },
+        { name: 'watermelon', emoji: '🍉' },
     ]
-    const [processedCount, setProcessedCount] = useState(0)
-    const [maxItems] = useState(1000) // Process up to 1000 items
+    const [processedCount, setProcessedCount] = useState<number>(0)
+    const maxItems: number = 5000
+
+    // Function to get speed label based on value
+    const getSpeedLabel = (value: number): string => {
+        if (value <= 50) return 'Very Fast'
+        if (value <= 100) return 'Fast'
+        if (value <= 150) return 'Normal'
+        if (value <= 200) return 'Slow'
+        return 'Very Slow'
+    }
+
+    // Scroll current item into view when new items are added
+    useEffect(() => {
+        if (streamContainerRef.current && recentItems.length > 0) {
+            const container = streamContainerRef.current
+            const containerHeight = container.clientHeight
+            const scrollTop = container.scrollTop
+            const scrollHeight = container.scrollHeight
+
+            // If we're not near the bottom, scroll to show the latest item
+            if (scrollHeight - scrollTop - containerHeight > 50) {
+                container.scrollTo({
+                    top: scrollHeight - containerHeight,
+                    behavior: 'smooth',
+                })
+            }
+        }
+    }, [recentItems])
 
     const processNextItem = useCallback(() => {
         if (processedCount >= maxItems) {
@@ -109,26 +168,20 @@ const CountMinSketchDemo = () => {
             return
         }
 
-        // Randomly select a fruit with weighted probability to create interesting patterns
-        const weights = [
-            0.2, 0.15, 0.12, 0.1, 0.08, 0.06, 0.05, 0.04, 0.04, 0.04, 0.03,
-            0.03, 0.02, 0.02, 0.02,
-        ]
-        let random = Math.random()
-        let item = availableFruits[0]
-
-        for (let i = 0; i < availableFruits.length; i++) {
-            random -= weights[i]
-            if (random <= 0) {
-                item = availableFruits[i]
-                break
-            }
-        }
+        // pick a random fruit form exponential distribution
+        const randomIndex = Math.floor(Math.random() * availableFruits.length)
+        const item = availableFruits[randomIndex].name
 
         setCurrentItem(item)
 
+        // Add to recent items for animation
+        const timestamp = Date.now()
+        setRecentItems((prev) =>
+            [...prev, { item, id: timestamp, timestamp }].slice(-8)
+        )
+
         // Add to data stream for visualization
-        setDataStream((prev) => [...prev.slice(-10), { item, id: Date.now() }])
+        setDataStream((prev) => [...prev.slice(-10), { item, id: timestamp }])
 
         // Update exact counts
         setExactCounts((prev) => ({
@@ -147,7 +200,18 @@ const CountMinSketchDemo = () => {
 
         // Clear highlights after a delay
         setTimeout(() => setHighlightedCells([]), 200)
-    }, [processedCount, maxItems, cms])
+    }, [processedCount, maxItems, cms, availableFruits])
+
+    // Clean up old items periodically
+    useEffect(() => {
+        const cleanup = setInterval(() => {
+            const now = Date.now()
+            setRecentItems((prev) =>
+                prev.filter((item) => now - item.timestamp < 4000)
+            )
+        }, 1000)
+        return () => clearInterval(cleanup)
+    }, [])
 
     useEffect(() => {
         if (!isPlaying) return
@@ -156,7 +220,7 @@ const CountMinSketchDemo = () => {
         return () => clearTimeout(timer)
     }, [isPlaying, processNextItem, speed])
 
-    const reset = () => {
+    const reset = (): void => {
         setCms(new CountMinSketch(20, 4))
         setExactCounts({})
         setDataStream([])
@@ -164,30 +228,38 @@ const CountMinSketchDemo = () => {
         setProcessedCount(0)
         setIsPlaying(false)
         setHighlightedCells([])
+        setRecentItems([])
     }
 
-    const togglePlay = () => {
+    const togglePlay = (): void => {
         setIsPlaying(!isPlaying)
     }
 
-    const uniqueItems = [...new Set(Object.keys(exactCounts))]
+    const uniqueItems: string[] = [...new Set(Object.keys(exactCounts))]
+
+    // Sort items by error (descending) for frequency comparison
+    const sortedItems = uniqueItems.sort((a, b) => {
+        const errorA = cms.query(a) - exactCounts[a]
+        const errorB = cms.query(b) - exactCounts[b]
+        return errorB - errorA
+    })
 
     return (
-        <div className="min-h-screen bg-gradient-to-br bg-primary p-6">
-            <div className="max-w-6xl mx-auto">
-                <h1 className="text-4xl font-bold mb-2">
+        <div className="min-h-screen p-6 bg-primary">
+            <div className="max-w-6xl mx-auto transform duration-500">
+                <h1 className="text-4xl font-bold mb-2 text-white">
                     Count-Min Sketch Demo
                 </h1>
-                <p className="text-white mb-6">
+                <p className="text-blue-100 mb-6">
                     Watch how the Count-Min Sketch probabilistic data structure
                     estimates frequencies compared to exact counting
                 </p>
 
                 {/* Controls */}
-                <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-                    <div className="flex items-center justify-between">
+                <Card className="bg-primary text-white rounded-lg shadow-lg p-4 mb-6">
+                    <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4">
-                            <button
+                            <Button
                                 onClick={togglePlay}
                                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                                     isPlaying
@@ -201,182 +273,196 @@ const CountMinSketchDemo = () => {
                                     <Play size={18} />
                                 )}
                                 <span>{isPlaying ? 'Pause' : 'Play'}</span>
-                            </button>
+                            </Button>
 
-                            <button
+                            <Button
                                 onClick={reset}
                                 className="flex items-center space-x-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                             >
                                 <RotateCcw size={18} />
                                 <span>Reset</span>
-                            </button>
-
-                            <button
-                                onClick={() => setShowSettings(!showSettings)}
-                                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-                            >
-                                <Settings size={18} />
-                                <span>Settings</span>
-                            </button>
+                            </Button>
                         </div>
 
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm">
                             Progress: {processedCount}/{maxItems}
                         </div>
                     </div>
 
-                    {showSettings && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Speed: {speed}ms
-                                    </label>
+                    {/* Speed Control with Slider */}
+                    <div className="p-4 rounded-lg">
+                        <div className="flex items-center space-x-6">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium mb-2">
+                                    Speed: {getSpeedLabel(speed)}
+                                </label>
+                                <div className="flex items-center space-x-4">
+                                    <span className="text-xs text-gray-300">
+                                        Fast
+                                    </span>
                                     <input
                                         type="range"
-                                        min="50"
-                                        max="1000"
-                                        step="50"
+                                        min="25"
+                                        max="250"
+                                        step="25"
                                         value={speed}
                                         onChange={(e) =>
-                                            setSpeed(Number(e.target.value))
+                                            setSpeed(parseInt(e.target.value))
                                         }
-                                        className="w-full"
+                                        className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                                     />
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                    <p className="font-medium mb-1">
-                                        Random Selection:
-                                    </p>
-                                    <p>
-                                        Fruits are selected with weighted
-                                        probabilities to create realistic
-                                        distribution patterns and demonstrate
-                                        hash collisions.
-                                    </p>
+                                    <span className="text-xs text-gray-300">
+                                        Slow
+                                    </span>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Data Stream Visualization */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                    <h2 className="text-xl text-black font-semibold mb-4">
-                        Data Stream (Random Selection)
-                    </h2>
-                    <div className="flex items-center space-x-2 overflow-hidden">
-                        <span className="text-sm text-black whitespace-nowrap">
-                            Stream:
-                        </span>
-                        <div className="flex space-x-2">
-                            {dataStream.map((data, idx) => (
-                                <div
-                                    key={data.id}
-                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 ${
-                                        idx === dataStream.length - 1
-                                            ? 'bg-blue-500 text-white scale-110'
-                                            : 'bg-gray-200 text-gray-700'
-                                    }`}
-                                    style={{
-                                        opacity: Math.max(
-                                            0.3,
-                                            (idx + 1) / dataStream.length
-                                        ),
-                                    }}
-                                >
-                                    {data.item}
-                                </div>
-                            ))}
-                        </div>
-                        {currentItem && (
-                            <div className="ml-4 text-lg font-bold text-blue-600">
-                                Current: {currentItem}
+                            <div className="text-sm max-w-xs">
+                                <p className="font-medium mb-1">
+                                    Random Selection:
+                                </p>
+                                <p className="text-xs">
+                                    Fruits are selected with weighted
+                                    probabilities to create realistic patterns.
+                                </p>
                             </div>
-                        )}
+                        </div>
                     </div>
-                    <div className="mt-4 text-sm text-gray-600">
-                        <p>
-                            Items are randomly selected with weighted
-                            probabilities. Common items like 'apple' appear more
-                            frequently, while rare items like 'quince' appear
-                            less often.
-                        </p>
-                    </div>
-                </div>
+                </Card>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Count-Min Sketch Table */}
-                    <div className="bg-white rounded-lg shadow-lg p-6">
-                        <h2 className="text-xl font-semibold mb-4 text-black">
+                <div className="grid grid-cols-1 gap-6">
+                    {/* Current Items Display */}
+                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-xl font-semibold mb-4">
+                            Stream of Recent Items
+                        </h2>
+                        <div
+                            ref={streamContainerRef}
+                            className="relative h-64 overflow-auto"
+                        >
+                            <div className="min-h-full flex flex-col justify-center items-center space-y-2 py-4">
+                                {recentItems.map((itemData, index) => {
+                                    const age = Date.now() - itemData.timestamp
+                                    const opacity = Math.max(0, 1 - age / 4000)
+                                    const scale = Math.max(0.5, 1 - age / 8000)
+                                    const isNewest =
+                                        index === recentItems.length - 1
+
+                                    return (
+                                        <div
+                                            key={itemData.id}
+                                            className={`transition-all duration-500 ease-out ${isNewest ? 'text-2xl font-bold text-blue-400' : 'text-lg'}`}
+                                            style={{
+                                                opacity,
+                                                transform: `scale(${scale})`,
+                                            }}
+                                        >
+                                            {
+                                                availableFruits.find(
+                                                    (f) =>
+                                                        f.name === itemData.item
+                                                )?.emoji
+                                            }{' '}
+                                            {itemData.item}
+                                        </div>
+                                    )
+                                })}
+                                {recentItems.length === 0 && (
+                                    <div className="text-gray-400 text-center">
+                                        <p className="text-xl mb-2">🍎</p>
+                                        <p>Waiting for items...</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Count-Min Sketch Table - Flipped */}
+                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-xl font-semibold mb-4">
                             Count-Min Sketch Table
                         </h2>
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse">
+                        <div className="overflow-auto max-h-80">
+                            <table className="w-full border-collapse bg-primary">
                                 <thead>
                                     <tr>
-                                        <th className="border border-gray-300 p-2 bg-gray-50 text-sm">
-                                            Row
+                                        <th className="border  p-2 text-sm">
+                                            Col
                                         </th>
                                         {Array.from(
-                                            { length: cms.width },
+                                            { length: cms.depth },
                                             (_, i) => (
                                                 <th
                                                     key={i}
-                                                    className="border border-gray-300 p-1 bg-gray-50 text-xs w-8"
+                                                    className="border  p-2 text-xs"
                                                 >
-                                                    {i}
+                                                    Row {i}
                                                 </th>
                                             )
                                         )}
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {cms.table.map((row, rowIdx) => (
-                                        <tr key={rowIdx}>
-                                            <td className="border border-gray-300 p-2 bg-gray-50 text-sm font-medium">
-                                                {rowIdx}
-                                            </td>
-                                            {row.map((cell, colIdx) => {
-                                                const isHighlighted =
-                                                    highlightedCells.some(
-                                                        (h) =>
-                                                            h.row === rowIdx &&
-                                                            h.col === colIdx
-                                                    )
-                                                return (
-                                                    <td
-                                                        key={colIdx}
-                                                        className={`border border-gray-300 p-1 text-center text-xs transition-colors duration-200 ${
-                                                            isHighlighted
-                                                                ? 'bg-yellow-300 animate-pulse'
-                                                                : cell > 0
-                                                                  ? 'bg-blue-100'
-                                                                  : 'bg-white'
-                                                        }`}
-                                                    >
-                                                        {cell}
-                                                    </td>
-                                                )
-                                            })}
-                                        </tr>
-                                    ))}
+                                <tbody className="bg-primary text-white">
+                                    {Array.from(
+                                        { length: cms.width },
+                                        (_, colIdx) => (
+                                            <tr key={colIdx}>
+                                                <td className="bg-primary text-white border p-2 text-sm font-medium">
+                                                    {colIdx}
+                                                </td>
+                                                {Array.from(
+                                                    { length: cms.depth },
+                                                    (_, rowIdx) => {
+                                                        const cell =
+                                                            cms.table[rowIdx][
+                                                                colIdx
+                                                            ]
+                                                        const isHighlighted =
+                                                            highlightedCells.some(
+                                                                (h) =>
+                                                                    h.row ===
+                                                                        rowIdx &&
+                                                                    h.col ===
+                                                                        colIdx
+                                                            )
+                                                        return (
+                                                            <td
+                                                                key={rowIdx}
+                                                                className={`border p-2 text-center text-xs transition-colors duration-200 ${
+                                                                    isHighlighted
+                                                                        ? 'bg-yellow-300 animate-pulse'
+                                                                        : cell >
+                                                                            0
+                                                                          ? 'bg-blue-500'
+                                                                          : 'bg-primary'
+                                                                }`}
+                                                            >
+                                                                {cell}
+                                                            </td>
+                                                        )
+                                                    }
+                                                )}
+                                            </tr>
+                                        )
+                                    )}
                                 </tbody>
                             </table>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs font-bold text-gray-500 mt-2">
                             Yellow cells show where the current item is being
                             incremented
                         </p>
-                    </div>
+                    </Card>
 
                     {/* Frequency Comparison */}
-                    <div className="bg-white rounded-lg shadow-lg p-6 overflow-y-auto max-h-[500px]">
-                        <h2 className="text-xl font-semibold mb-4 text-black">
+                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6 h-96">
+                        <h2 className="text-xl font-semibold mb-4">
                             Frequency Comparison
+                            <span className="text-md ml-2">
+                                (Sorted by Error)
+                            </span>
                         </h2>
-                        <div className="space-y-3">
-                            {uniqueItems.map((item) => {
+                        <div className="overflow-y-auto h-80 space-y-3 pr-2">
+                            {sortedItems.map((item: string, index: number) => {
                                 const exactCount = exactCounts[item]
                                 const cmsCount = cms.query(item)
                                 const error = cmsCount - exactCount
@@ -384,21 +470,24 @@ const CountMinSketchDemo = () => {
                                 return (
                                     <div
                                         key={item}
-                                        className="border border-gray-200 rounded-lg p-3"
+                                        className="border border-gray-400 shadow-lg rounded-lg p-3 transform transition-all duration-500 ease-in-out"
+                                        style={{
+                                            transitionDelay: `${index * 50}ms`,
+                                        }}
                                     >
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-medium text-gray-800">
+                                            <span className="font-medium text-white">
                                                 {item}
                                             </span>
                                             <div className="flex space-x-4 text-sm">
-                                                <span className="text-green-600">
+                                                <span className="font-semibold text-green-600">
                                                     Exact: {exactCount}
                                                 </span>
-                                                <span className="text-blue-600">
+                                                <span className="font-semibold text-blue-600">
                                                     CMS: {cmsCount}
                                                 </span>
                                                 <span
-                                                    className={`${error > 0 ? 'text-red-600' : 'text-gray-500'}`}
+                                                    className={`font-semibold ${error < 0 ? 'text-red-600' : 'text-yellow-600'}`}
                                                 >
                                                     Error: +{error}
                                                 </span>
@@ -444,54 +533,37 @@ const CountMinSketchDemo = () => {
                             })}
                         </div>
 
-                        {uniqueItems.length === 0 && (
-                            <p className="text-gray-500 text-center py-8">
-                                No data processed yet. Click Play to start!
-                            </p>
+                        {sortedItems.length === 0 && (
+                            <div className="flex items-center justify-center h-80">
+                                <p className="text-center">
+                                    No data processed yet. Click Play to start!
+                                </p>
+                            </div>
                         )}
-                    </div>
-                </div>
-
-                {/* Information Panel */}
-                <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-                    <h2 className="text-xl font-semibold mb-4">
-                        How Count-Min Sketch Works
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                        <div>
-                            <h3 className="font-semibold mb-2">Algorithm</h3>
-                            <ul className="space-y-1">
-                                <li>
-                                    • Uses multiple hash functions (rows in
-                                    table)
-                                </li>
-                                <li>
-                                    • Each item hashes to one position per row
-                                </li>
-                                <li>
-                                    • Increments all corresponding positions
-                                </li>
-                                <li>
-                                    • Query returns minimum of all positions
-                                </li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold mb-2">Properties</h3>
-                            <ul className="space-y-1">
-                                <li>
-                                    • Space-efficient probabilistic structure
-                                </li>
-                                <li>• Never underestimates frequency</li>
-                                <li>
-                                    • May overestimate due to hash collisions
-                                </li>
-                                <li>• Error decreases with table width</li>
-                            </ul>
-                        </div>
-                    </div>
+                    </Card>
                 </div>
             </div>
+
+            <style jsx>{`
+                .slider::-webkit-slider-thumb {
+                    appearance: none;
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 50%;
+                    background: #3b82f6;
+                    cursor: pointer;
+                    border: 2px solid #1e40af;
+                }
+
+                .slider::-moz-range-thumb {
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 50%;
+                    background: #3b82f6;
+                    cursor: pointer;
+                    border: 2px solid #1e40af;
+                }
+            `}</style>
         </div>
     )
 }
