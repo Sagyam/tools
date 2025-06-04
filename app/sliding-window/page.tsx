@@ -108,7 +108,7 @@ const SlidingWindowRateLimiter = () => {
     )
 
     return (
-        <div className="min-h-screen bg-background flex items-start justify-center">
+        <div className="min-h-screen bg-primary flex items-start justify-center">
             <div className="max-w-6xl">
                 <h1 className="text-3xl font-bold text-center mb-2">
                     Sliding Window Rate Limiter
@@ -120,7 +120,7 @@ const SlidingWindowRateLimiter = () => {
                 </p>
 
                 {/* Configuration */}
-                <div className="bg-gray-800 rounded-lg shadow-lg my-4 p-8">
+                <Card className="bg-primary my-4 p-8">
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <Label className="block text-sm font-medium mb-2">
@@ -207,10 +207,10 @@ const SlidingWindowRateLimiter = () => {
                             Reset
                         </Button>
                     </div>
-                </div>
+                </Card>
 
                 {/* Timeline Visualization */}
-                <div className="bg-gray-800 border-2 rounded-lg p-4">
+                <Card className="bg-primary p-4">
                     <h3 className="text-lg text-white font-semibold mb-4">
                         Request Timeline
                     </h3>
@@ -391,25 +391,25 @@ const SlidingWindowRateLimiter = () => {
                             </span>
                         </div>
                     </div>
-                </div>
+                </Card>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 my-4">
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                <div className="bg-primary grid grid-cols-3 gap-4 my-4">
+                    <Card className="  p-4 text-center">
                         <div className="text-2xl font-bold text-green-600">
                             {servedCount}
                         </div>
                         <div className="text-sm text-green-800">Served</div>
                     </Card>
 
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className=" p-4 text-center">
                         <div className="text-2xl font-bold text-red-600">
                             {rejectedCount}
                         </div>
                         <div className="text-sm text-red-800">Rejected</div>
                     </Card>
 
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className="bg-primary p-4 text-center">
                         <div className="text-2xl font-bold text-purple-600">
                             {getRequestsInSlidingWindow(currentTime)}
                         </div>

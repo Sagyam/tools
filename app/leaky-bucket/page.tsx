@@ -152,14 +152,14 @@ const LeakyBucketSimulator = () => {
     const bucketFillPercentage = (bucket.length / bucketSize) * 100
 
     return (
-        <div className="min-h-screen bg-background flex items-start justify-center">
+        <div className="min-h-screen bg-primary flex items-start justify-center">
             <div className="max-w-6xl">
-                <h1 className="text-3xl font-bold text-center my-4 p-8">
+                <h1 className="text-3xl font-bold text-center my-2 p-8">
                     Leaky Bucket Rate Limiting Simulator
                 </h1>
 
                 {/* Controls */}
-                <Card className="bg-gray-800 rounded-lg shadow-lg my-4 p-8">
+                <Card className="bg-primary rounded-lg shadow-lg my-4 p-8">
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <Label className="block text-sm font-medium mb-2">
@@ -237,7 +237,7 @@ const LeakyBucketSimulator = () => {
 
                 {/* Animation Container */}
                 <Card
-                    className="bg-gray-800 rounded-lg shadow-lg my-4 p-8"
+                    className="bg-primary rounded-lg shadow-lg my-4 p-8"
                     style={{ height: '500px' }}
                 >
                     <div className="relative h-full flex items-center justify-between">
@@ -366,21 +366,21 @@ const LeakyBucketSimulator = () => {
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-x-4">
-                    <Card className="bg-gray-800 p-4 rounded-lg text-center">
+                    <Card className="bg-primary p-4 rounded-lg text-center">
                         <div className="text-2xl font-bold text-green-600">
                             {stats.processedRequests}
                         </div>
                         <div className="text-sm ">Processed</div>
                     </Card>
 
-                    <Card className="bg-gray-800 p-4 rounded-lg text-center">
+                    <Card className="bg-primary p-4 rounded-lg text-center">
                         <div className="text-2xl font-bold text-red-600">
                             {stats.droppedRequests}
                         </div>
                         <div className="text-sm ">Dropped</div>
                     </Card>
 
-                    <Card className="bg-gray-800 p-4 rounded-lg text-center">
+                    <Card className="bg-primary p-4 rounded-lg text-center">
                         <div className="text-2xl font-bold text-purple-600">
                             {stats.currentBucketSize}
                         </div>

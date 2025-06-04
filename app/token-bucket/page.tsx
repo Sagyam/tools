@@ -142,11 +142,11 @@ const TokenBucketRateLimiter = () => {
     return (
         <div className="min-h-screen bg-background flex items-start justify-center">
             <div className="max-w-6xl">
-                <h1 className="text-3xl font-bold text-center my-4 p-8">
+                <h1 className="text-3xl font-bold text-center my-2 p-8">
                     Token Bucket Rate Limiter Simulator
                 </h1>
 
-                <Card className="bg-gray-800 rounded-lg shadow-lg my-4 p-8">
+                <Card className="bg-primary rounded-lg shadow-lg my-4 p-8">
                     <div className="grid grid-cols-2 gap-6">
                         <div>
                             <Label className="block text-sm font-medium mb-2">
@@ -186,6 +186,14 @@ const TokenBucketRateLimiter = () => {
                         </div>
                         <div className="flex items-center justify-center gap-x-4">
                             <Button
+                                onClick={createRequest}
+                                className="w-fit bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
+                            >
+                                <Send size={20} />
+                                Send Request
+                            </Button>
+
+                            <Button
                                 onClick={toggleSimulation}
                                 className={`w-24 px-4 py-2 rounded-lg font-medium transition-colors
                                  ${
@@ -195,14 +203,6 @@ const TokenBucketRateLimiter = () => {
                                  }`}
                             >
                                 {isRunning ? 'Pause' : 'Resume'}
-                            </Button>
-
-                            <Button
-                                onClick={createRequest}
-                                className="w-fit bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
-                            >
-                                <Send size={20} />
-                                Send Request
                             </Button>
 
                             <Button
@@ -217,7 +217,7 @@ const TokenBucketRateLimiter = () => {
                 </Card>
 
                 <Card
-                    className="bg-gray-800 relative rounded-lg shadow-lg my-4 p-8"
+                    className="bg-primary relative rounded-lg shadow-lg my-4 p-8"
                     ref={containerRef}
                     style={{ height: '500px' }}
                 >
@@ -230,13 +230,13 @@ const TokenBucketRateLimiter = () => {
 
                     <div className="absolute left-1/2 top-16 transform -translate-x-1/2">
                         <div className="text-center mb-4">
-                            <div className="text-sm text-gray-400 mb-2">
+                            <div className="text-sm mb-2">
                                 Tokens are added at fixed rate
                             </div>
                             <Zap className="mx-auto text-green-400" size={24} />
                         </div>
                         <div className="relative">
-                            <div className="w-32 h-48 border-4 border-red-400 rounded-lg bg-gray-700 relative overflow-hidden">
+                            <div className="w-32 h-48 border-4 border-red-400 rounded-lg bg-primary relative overflow-hidden">
                                 <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center items-end p-2">
                                     {Array.from(
                                         { length: currentTokens },
@@ -306,25 +306,25 @@ const TokenBucketRateLimiter = () => {
                 </Card>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className="bg-primary rounded-lg p-4 text-center">
                         <div className="text-2xl font-bold text-green-400">
                             {currentTokens}
                         </div>
                         <div className="text-sm ">Current Tokens</div>
                     </Card>
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className="bg-primary rounded-lg p-4 text-center">
                         <div className="text-2xl font-bold text-blue-400">
                             {stats.processed}
                         </div>
                         <div className="text-sm ">Processed</div>
                     </Card>
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className="bg-primary rounded-lg p-4 text-center">
                         <div className="text-2xl font-bold text-red-400">
                             {stats.dropped}
                         </div>
                         <div className="text-sm ">Dropped</div>
                     </Card>
-                    <Card className="bg-gray-800 rounded-lg p-4 text-center">
+                    <Card className="bg-primary rounded-lg p-4 text-center">
                         <div className="text-2xl font-bold text-yellow-400">
                             {stats.processed + stats.dropped > 0
                                 ? Math.round(
