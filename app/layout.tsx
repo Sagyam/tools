@@ -26,7 +26,7 @@ export default async function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning className={font.className}>
             <body>
-                <SidebarProvider defaultOpen={true}>
+                <SidebarProvider defaultOpen={false}>
                     <AppSidebar />
                     <ThemeProvider
                         attribute="class"
