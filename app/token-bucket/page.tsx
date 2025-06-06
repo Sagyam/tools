@@ -1,506 +1,287 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Pause, Play, RotateCcw, Send, Server, User, Zap } from 'lucide-react'
+import { Pause, Play, RefreshCw, Server, User } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
-enum RequestStatus {
-    Moving = 'moving',
-    Accepted = 'accepted',
-    Completed = 'completed',
-    Dropped = 'dropped',
-    Fading = 'fading',
+interface Packet {
+    id: string
+    status: 'moving' | 'accepted' | 'dropped'
+    timestamp: number
 }
 
-interface Request {
-    id: number
-    status: RequestStatus
-    x: number // position on the x-axis (0-100%)
-    timestamp: number // time when request was created
-}
+export default function TokenBucketSimulator() {
+    const [capacity, setCapacity] = useState<number>(15)
+    const [refillRate, setRefillRate] = useState<number>(3)
+    const [tokens, setTokens] = useState<number>(capacity)
+    const [processed, setProcessed] = useState<number>(0)
+    const [dropped, setDropped] = useState<number>(0)
+    const [running, setRunning] = useState<boolean>(true)
+    const [packets, setPackets] = useState<Packet[]>([])
 
-interface Token {
-    id: number
-    isVisible: boolean
-    isAnimating: boolean
-}
+    const containerRef = useRef<HTMLDivElement>(null)
+    const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-const TokenBucketRateLimiter = () => {
-    const [bucketCapacity, setBucketCapacity] = useState(15)
-    const [refillRate, setRefillRate] = useState(3)
-    const [currentTokens, setCurrentTokens] = useState(5)
-    const [tokens, setTokens] = useState<Token[]>([])
-    const [requests, setRequests] = useState<Request[]>([])
-    const [stats, setStats] = useState({ processed: 0, dropped: 0 })
-    const [isRunning, setIsRunning] = useState(true)
-
-    const requestIdRef = useRef(0)
-    const tokenIdRef = useRef(0)
-    const intervalRef = useRef<NodeJS.Timeout>(
-        null as unknown as NodeJS.Timeout
-    )
-    const containerRef = useRef(null)
-
-    // Initialize tokens with animation support
     useEffect(() => {
-        const initialTokens = Array.from({ length: bucketCapacity }, () => ({
-            id: tokenIdRef.current++,
-            isVisible: true,
-            isAnimating: false,
-        }))
-        setTokens(initialTokens)
-    }, [bucketCapacity])
+        if (running) {
+            intervalRef.current = setInterval(() => {
+                setTokens((prev) => Math.min(prev + refillRate, capacity))
+            }, 1000)
+        } else {
+            if (intervalRef.current) clearInterval(intervalRef.current)
+        }
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current)
+        }
+    }, [running, refillRate, capacity])
 
-    // Update tokens when currentTokens changes
     useEffect(() => {
-        setTokens((prevTokens) => {
-            const newTokens = [...prevTokens]
-            const currentVisibleCount = newTokens.filter(
-                (t) => t.isVisible
-            ).length
-
-            if (currentTokens > currentVisibleCount) {
-                // Add tokens with animation
-                const tokensToAdd = currentTokens - currentVisibleCount
-                for (let i = 0; i < tokensToAdd; i++) {
-                    const hiddenTokenIndex = newTokens.findIndex(
-                        (t) => !t.isVisible
-                    )
-                    if (hiddenTokenIndex !== -1) {
-                        newTokens[hiddenTokenIndex] = {
-                            ...newTokens[hiddenTokenIndex],
-                            isVisible: true,
-                            isAnimating: true,
-                        }
-                        // Remove animation flag after animation completes
-                        setTimeout(() => {
-                            setTokens((prev) =>
-                                prev.map((t) =>
-                                    t.id === newTokens[hiddenTokenIndex].id
-                                        ? { ...t, isAnimating: false }
-                                        : t
-                                )
-                            )
-                        }, 300)
-                    } else {
-                        // Create new token if none available
-                        newTokens.push({
-                            id: tokenIdRef.current++,
-                            isVisible: true,
-                            isAnimating: true,
-                        })
-                        // Remove an animation flag after animation completes
-                        setTimeout(() => {
-                            setTokens((prev) =>
-                                prev.map((t) =>
-                                    t.id === tokenIdRef.current - 1
-                                        ? { ...t, isAnimating: false }
-                                        : t
-                                )
-                            )
-                        }, 300)
-                    }
-                }
-            } else if (currentTokens < currentVisibleCount) {
-                // Remove tokens with animation
-                const tokensToRemove = currentVisibleCount - currentTokens
-                let removed = 0
-                for (
-                    let i = newTokens.length - 1;
-                    i >= 0 && removed < tokensToRemove;
-                    i--
-                ) {
-                    if (newTokens[i].isVisible) {
-                        newTokens[i] = {
-                            ...newTokens[i],
-                            isAnimating: true,
-                        }
-                        // Hide token after animation
-                        setTimeout(() => {
-                            setTokens((prev) =>
-                                prev.map((t) =>
-                                    t.id === newTokens[i].id
-                                        ? {
-                                              ...t,
-                                              isVisible: false,
-                                              isAnimating: false,
-                                          }
-                                        : t
-                                )
-                            )
-                        }, 300)
-                        removed++
-                    }
-                }
-            }
-
-            return newTokens
-        })
-    }, [currentTokens])
-
-    // Refill tokens at a specified rate
-    useEffect(() => {
-        if (!isRunning) return
-
-        intervalRef.current = setInterval(() => {
-            setCurrentTokens((prev) =>
-                Math.min(prev + refillRate, bucketCapacity)
+        const timer = setInterval(() => {
+            setPackets((prev) =>
+                prev.filter((p) => Date.now() - p.timestamp < 3000)
             )
-        }, 1000)
-
-        return () => clearInterval(intervalRef.current)
-    }, [refillRate, bucketCapacity, isRunning])
-
-    // Clean up completed requests with fade out
-    useEffect(() => {
-        const cleanup = setInterval(() => {
-            setRequests((prev) => {
-                const updated = prev.map((req: Request) => {
-                    if (req.status === RequestStatus.Completed) {
-                        return { ...req, status: RequestStatus.Fading }
-                    }
-                    return req
-                })
-
-                // Remove fading requests after fade animation
-                setTimeout(() => {
-                    setRequests((current) =>
-                        current.filter((req) => req.status !== 'fading')
-                    )
-                }, 500)
-
-                return updated
-            })
-        }, 1500)
-
-        return () => clearInterval(cleanup)
+        }, 500)
+        return () => clearInterval(timer)
     }, [])
 
-    const createRequest = () => {
-        const newRequest: Request = {
-            id: requestIdRef.current++,
-            status: RequestStatus.Moving,
-            x: 0,
+    const sendRequest = () => {
+        const id = Math.random().toString(36).substring(2, 15)
+        const packet: Packet = {
+            id,
+            status: 'moving',
             timestamp: Date.now(),
         }
+        setPackets((prev) => [...prev, packet])
 
-        setRequests((prev) => [...prev, newRequest])
-
-        // Animate request movement (to 60%)
         setTimeout(() => {
-            setRequests((prev) =>
-                prev.map((req) =>
-                    req.id === newRequest.id ? { ...req, x: 60 } : req
-                )
-            )
-        }, 50)
-    }
-
-    const processRequest = (requestId: number) => {
-        setCurrentTokens((prev) => {
-            if (prev > 0) {
-                // Token available - accept the request
-                setStats((s) => ({ ...s, processed: s.processed + 1 }))
-                setRequests((r) =>
-                    r.map((req) =>
-                        req.id === requestId
-                            ? { ...req, status: RequestStatus.Accepted, x: 85 }
-                            : req
-                    )
-                )
-                // Complete the request after reaching server
-                setTimeout(() => {
-                    setRequests((r) =>
-                        r.map((req) =>
-                            req.id === requestId
-                                ? { ...req, status: RequestStatus.Completed }
-                                : req
+            setTokens((prev) => {
+                if (prev > 0) {
+                    setProcessed((p) => p + 1)
+                    setPackets((pkts) =>
+                        pkts.map((p) =>
+                            p.id === id ? { ...p, status: 'accepted' } : p
                         )
                     )
-                }, 1000)
-                return prev - 1
-            } else {
-                // No tokens available - drop the request at the bucket
-                setStats((s) => ({ ...s, dropped: s.dropped + 1 }))
-                setRequests((r) =>
-                    r.map((req) =>
-                        req.id === requestId
-                            ? { ...req, status: RequestStatus.Dropped, x: 50 } // Stay at bucket position
-                            : req
-                    )
-                )
-                // Start fade out immediately for dropped requests
-                setTimeout(() => {
-                    setRequests((r) =>
-                        r.map((req) =>
-                            req.id === requestId
-                                ? { ...req, status: RequestStatus.Fading }
-                                : req
+                    return prev - 1
+                } else {
+                    setDropped((d) => d + 1)
+                    setPackets((pkts) =>
+                        pkts.map((p) =>
+                            p.id === id ? { ...p, status: 'dropped' } : p
                         )
                     )
-                }, 500) // Short delay to show the red state
-                return prev
-            }
-        })
+                    return prev
+                }
+            })
+        }, 800)
     }
 
-    useEffect(() => {
-        const movingRequests = requests.filter(
-            (req) => req.status === 'moving' && req.x >= 60
-        )
-        movingRequests.forEach((req) => {
-            setTimeout(() => processRequest(req.id), 500)
-        })
-    }, [requests])
-
-    const resetStats = () => {
-        setStats({ processed: 0, dropped: 0 })
-        setRequests([])
-        setCurrentTokens(bucketCapacity)
+    const reset = () => {
+        setTokens(capacity)
+        setProcessed(0)
+        setDropped(0)
+        setPackets([])
+        setRunning(true)
     }
 
-    const toggleSimulation = () => {
-        setIsRunning(!isRunning)
-    }
+    const successRate =
+        processed + dropped === 0
+            ? 100
+            : Math.round((processed / (processed + dropped)) * 100)
+
+    const isTooSmall =
+        containerRef.current?.offsetWidth &&
+        containerRef.current.offsetWidth < 500
 
     return (
-        <div className="min-h-screen bg-background flex items-start justify-center">
-            <div className="max-w-6xl">
-                <h1 className="text-3xl font-bold text-center my-2 p-8">
-                    Token Bucket Rate Limiter Simulator
-                </h1>
+        <div className="p-4 space-y-6">
+            <h1 className="text-2xl font-bold text-center">
+                Token Bucket Rate Limiter Simulator
+            </h1>
 
-                <Card className="bg-primary rounded-lg shadow-lg my-4 p-8">
-                    <div className="grid grid-cols-2 gap-6">
+            <Card>
+                <CardContent className="grid grid-row-2 gap-y-4 p-4">
+                    <div className="flex flex-row items-center justify-start gap-6">
                         <div>
-                            <Label className="block text-sm font-medium mb-2">
-                                Bucket Capacity
-                            </Label>
+                            <Label>Bucket Capacity</Label>
                             <Input
+                                className="w-48"
                                 type="number"
-                                min="1"
-                                max="15"
-                                value={bucketCapacity}
+                                value={capacity}
                                 onChange={(e) =>
-                                    setBucketCapacity(parseInt(e.target.value))
+                                    setCapacity(Number(e.target.value))
                                 }
-                                className="w-full px-3 py-2 border rounded-lg"
+                                min={1}
+                                max={20}
                             />
-                            <span className="text-sm text-primary-foreground">
-                                {bucketCapacity} tokens
-                            </span>
+                            <div className="text-xs text-muted-foreground">
+                                {capacity} tokens
+                            </div>
                         </div>
                         <div>
-                            <Label className="block text-sm font-medium mb-2">
-                                Refill Rate
-                            </Label>
+                            <Label>Refill Rate</Label>
                             <Input
+                                className="w-48"
                                 type="number"
-                                min="1"
-                                max="5"
                                 value={refillRate}
                                 onChange={(e) =>
-                                    setRefillRate(parseInt(e.target.value))
+                                    setRefillRate(Number(e.target.value))
                                 }
-                                className="w-full px-3 py-2 border rounded-lg"
+                                min={1}
+                                max={5}
                             />
-                            <span className="text-sm text-primary-foreground">
+                            <div className="text-xs text-muted-foreground">
                                 {refillRate}/second
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-center gap-x-4">
-                            <Button
-                                onClick={createRequest}
-                                className="w-fit bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium"
-                            >
-                                <Send size={20} />
-                                Send Request
-                            </Button>
-
-                            <Button
-                                onClick={toggleSimulation}
-                                className={`w-24 px-4 py-2 rounded-lg font-medium transition-colors
-                                 ${
-                                     isRunning
-                                         ? 'bg-yellow-600 hover:bg-yellow-700'
-                                         : 'bg-green-600 hover:bg-green-700'
-                                 }`}
-                            >
-                                {isRunning ? (
-                                    <Pause size={16} />
-                                ) : (
-                                    <Play size={16} />
-                                )}
-                                {isRunning ? 'Pause' : 'Resume'}
-                            </Button>
-
-                            <Button
-                                onClick={resetStats}
-                                className="w-fit bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium"
-                            >
-                                <RotateCcw size={20} />
-                                Reset
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card
-                    className="bg-primary relative rounded-lg shadow-lg my-4 p-8"
-                    ref={containerRef}
-                    style={{ height: '500px' }}
-                >
-                    <div className="absolute left-8 top-1/2 transform -translate-y-1/2 text-center">
-                        <div className="bg-blue-600 rounded-full p-4 mb-2">
-                            <User size={32} />
-                        </div>
-                        <div className="text-sm font-medium">User</div>
-                    </div>
-
-                    <div className="absolute left-1/2 top-16 transform -translate-x-1/2">
-                        <div className="text-left mb-4">
-                            <div className="text-sm mb-2">
-                                Tokens are added at fixed rate
-                            </div>
-                            <Zap className="ml-12 text-green-400" size={24} />
-                        </div>
-                        <div className="relative">
-                            <div className="w-32 h-48 border-4 border-red-400 rounded-lg bg-primary relative overflow-hidden">
-                                <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center items-end p-2">
-                                    {tokens.map((token, i) => (
-                                        <div
-                                            key={token.id}
-                                            className={`w-6 h-6 bg-green-400 transform rotate-45 m-1 transition-all duration-300 ease-in-out ${
-                                                token.isVisible
-                                                    ? 'opacity-100 scale-100'
-                                                    : 'opacity-0 scale-0'
-                                            } ${
-                                                token.isAnimating &&
-                                                token.isVisible
-                                                    ? 'animate-bounce'
-                                                    : ''
-                                            }`}
-                                            style={{
-                                                animationDelay: `${i * 0.1}s`,
-                                                animationDuration:
-                                                    token.isAnimating
-                                                        ? '0.6s'
-                                                        : '2s',
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="text-center mt-2 text-md">
-                                <div className="text-primary-foreground">
-                                    {currentTokens}/{bucketCapacity} tokens
-                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div className="absolute right-8 top-1/3 text-center">
-                        <div className="w-16 h-16 bg-green-500 rounded-lg flex items-center justify-center mb-2">
-                            <Server size={32} />
-                        </div>
-                        <div className="text-sm font-medium">Server</div>
-                    </div>
-
-                    {requests.map((request) => (
-                        <div
-                            key={request.id}
-                            className={`absolute transition-all duration-1000 ease-in-out ${
-                                request.status === 'fading'
-                                    ? 'opacity-0 transition-opacity duration-500'
-                                    : 'opacity-100'
-                            }`}
-                            style={{
-                                left: `${request.x}%`,
-                                top:
-                                    request.status === 'dropped'
-                                        ? '65%' // Position dropped requests below the bucket
-                                        : '50%',
-                                transform: 'translate(-50%, -50%)',
-                            }}
+                    <div className="flex flex-row gap-4 items-center justify-start">
+                        <Button
+                            className="w-fit bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={sendRequest}
                         >
-                            <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm transition-colors duration-300 ${
-                                    request.status === 'accepted' ||
-                                    request.status === 'completed'
-                                        ? 'bg-green-500'
-                                        : request.status === 'dropped'
-                                          ? 'bg-red-500 animate-pulse'
-                                          : 'bg-blue-500'
-                                }`}
-                            >
-                                {request.status === 'dropped' ? 'X' : 'R'}
+                            <Play className="mr-2 w-4 h-4" />
+                            Send Request
+                        </Button>
+
+                        <Button
+                            className={`${
+                                running
+                                    ? 'bg-red-500 hover:bg-red-600'
+                                    : 'bg-yellow-500 hover:bg-yellow-600'
+                            } text-white w-fit`}
+                            onClick={() => setRunning(!running)}
+                        >
+                            {running ? (
+                                <>
+                                    <Pause className="mr-2 w-4 h-4" />
+                                    Pause
+                                </>
+                            ) : (
+                                <>
+                                    <Play className="mr-2 w-4 h-4" />
+                                    Resume
+                                </>
+                            )}
+                        </Button>
+                        <Button
+                            className="w-fit bg-gray-500 hover:bg-gray-600 text-white"
+                            onClick={reset}
+                        >
+                            <RefreshCw className="mr-2 w-4 h-4" />
+                            Reset
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardContent className="p-6" ref={containerRef}>
+                    {isTooSmall ? (
+                        <div className="text-red-500 text-center">
+                            Screen too small. Minimum 500px width required to
+                            run the simulation.
+                        </div>
+                    ) : (
+                        <div className="flex justify-between items-center relative h-48 min-w-[500px]">
+                            <div className="text-center text-sm">
+                                <div className="font-semibold text-blue-500 border-2 border-blue-500 rounded-sm mb-2 flex flex-col justify-center items-center p-4 gap-2">
+                                    <User scale={4} />
+                                    User
+                                </div>
+                            </div>
+
+                            <div className="flex-1 h-full relative">
+                                <div className="absolute left-[40%] top-1/2 -translate-y-1/2 z-10">
+                                    <div className="border-lime-500 border-2 rounded-lg p-2 grid grid-cols-4 gap-2 min-w-16 min-h-24">
+                                        {Array.from({ length: capacity }).map(
+                                            (_, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`h-4 w-4 rounded-md transition-all duration-500 ${i < tokens ? 'bg-lime-500 border-lime-600 border-2 opacity-100' : 'opacity-0'}`}
+                                                    style={{
+                                                        transitionDelay: `${i * 30}ms`,
+                                                    }}
+                                                ></div>
+                                            )
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-center mt-1">
+                                        {tokens}/{capacity} tokens
+                                    </div>
+                                </div>
+                                {packets.map((packet) => (
+                                    <div
+                                        key={packet.id}
+                                        className={`absolute h-4 w-4 rounded-full transition-all duration-700 ease-in-out
+                                                      ${packet.status === 'moving' ? 'left-0 bg-background top-1/2 -translate-y-1/2 opacity-100' : ''}
+                                                      ${packet.status === 'accepted' ? 'left-[80%] bg-background top-1/2 -translate-y-1/2 opacity-100' : ''}
+                                                      ${packet.status === 'dropped' ? 'left-[40%] top-[85%] bg-background opacity-100' : ''}`}
+                                        style={{
+                                            backgroundColor:
+                                                packet.status === 'moving'
+                                                    ? '#facc15'
+                                                    : packet.status ===
+                                                        'accepted'
+                                                      ? '#22c55e'
+                                                      : '#ef4444',
+                                        }}
+                                    ></div>
+                                ))}
+                            </div>
+
+                            <div className="text-center text-sm">
+                                <div className="font-semibold text-green-500 border-2 border-green-500 rounded-sm mb-2 flex flex-col justify-center items-center p-4 gap-2">
+                                    <Server scale={4} />
+                                    Server
+                                </div>
                             </div>
                         </div>
-                    ))}
+                    )}
+                </CardContent>
+            </Card>
 
-                    {/* Legend */}
-                    <div className="absolute bottom-4 right-4 bg-secondary bg-opacity-50 rounded-lg p-3 text-sm">
-                        <div className="font-semibold mb-2 text-white">
-                            Request Status:
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">
+                            Current Tokens
                         </div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                            <span className="text-white">Moving to Bucket</span>
+                        <div className="text-2xl font-bold text-green-500">
+                            {tokens}
                         </div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                            <span className="text-white">
-                                Accepted & Processed
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                            <span className="text-white">
-                                Dropped (No Tokens)
-                            </span>
-                        </div>
-                    </div>
+                    </CardContent>
                 </Card>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
-                    <Card className="bg-primary rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-green-400">
-                            {currentTokens}
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">
+                            Processed
                         </div>
-                        <div className="text-sm ">Current Tokens</div>
-                    </Card>
-                    <Card className="bg-primary rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-400">
-                            {stats.processed}
+                        <div className="text-2xl font-bold">{processed}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">
+                            Dropped
                         </div>
-                        <div className="text-sm ">Processed</div>
-                    </Card>
-                    <Card className="bg-primary rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-red-400">
-                            {stats.dropped}
+                        <div className="text-2xl font-bold text-red-500">
+                            {dropped}
                         </div>
-                        <div className="text-sm ">Dropped</div>
-                    </Card>
-                    <Card className="bg-primary rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-yellow-400">
-                            {stats.processed + stats.dropped > 0
-                                ? Math.round(
-                                      (stats.processed /
-                                          (stats.processed + stats.dropped)) *
-                                          100
-                                  )
-                                : 100}
-                            %
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="text-sm text-muted-foreground">
+                            Success Rate
                         </div>
-                        <div className="text-sm ">Success Rate</div>
-                    </Card>
-                </div>
+                        <div className="text-2xl font-bold">{successRate}%</div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )
 }
-
-export default TokenBucketRateLimiter
