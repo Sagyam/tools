@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { motion } from 'framer-motion'
 import {
@@ -52,7 +53,7 @@ const servers: ServerType[] = [
 
 export default function DnsSimulator() {
     const [records, setRecords] = useState<DnsRecord[]>(initialRecords)
-    const [query, setQuery] = useState<string>('')
+    const [query, setQuery] = useState<string>('example.com')
     const [queryResult, setQueryResult] = useState<string | null>(null)
     const [isRecursive, setIsRecursive] = useState<boolean>(true)
     const [currentStep, setCurrentStep] = useState<number>(-1)
@@ -121,13 +122,23 @@ export default function DnsSimulator() {
     }
 
     return (
-        <div className="p-4 max-w-5xl mx-auto">
+        <div className="p-4 w-3xl mx-auto">
             <h1 className="text-3xl font-bold mb-6">DNS Server Simulator</h1>
 
             <Tabs defaultValue="query">
-                <TabsList className="mb-4">
-                    <TabsTrigger value="query">Query DNS</TabsTrigger>
-                    <TabsTrigger value="records">Manage Records</TabsTrigger>
+                <TabsList className="bg-gray-900 mb-4 transition-colors duration-300">
+                    <TabsTrigger
+                        className="bg-gray-900 hover:bg-gray-800 transition-colors duration-300"
+                        value="query"
+                    >
+                        Query DNS
+                    </TabsTrigger>
+                    <TabsTrigger
+                        className="bg-gray-900 hover:bg-gray-800 transition-colors duration-300"
+                        value="records"
+                    >
+                        Manage Records
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="query">
@@ -137,28 +148,33 @@ export default function DnsSimulator() {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                         />
-                        <Button onClick={handleQuery}>Query</Button>
                         <Button
-                            variant="outline"
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={handleQuery}
+                        >
+                            Query
+                        </Button>
+                        <Button
+                            className={`${isRecursive ? 'bg-indigo-500 hover:bg-indigo-700' : 'bg-cyan-500 hover:bg-cyan-700'} text-white`}
                             onClick={() => setIsRecursive(!isRecursive)}
                         >
                             Mode: {isRecursive ? 'Recursive' : 'Iterative'}
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-5 gap-4 mb-4">
+                    <div className="bg-primary grid grid-cols-5 gap-4 items-center mb-4">
                         {servers.map((server, index) => (
                             <motion.div
                                 key={server.name}
-                                className={`p-4 rounded-2xl text-center shadow-md flex flex-col items-center gap-2 transition-colors duration-300 ${
+                                className={`p-4 rounded-2xl text-center shadow-md flex flex-col items-center justify-center gap-2 h-32 transition-colors duration-300 ${
                                     index === currentStep
-                                        ? 'bg-blue-200'
-                                        : 'bg-gray-100'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-primary border-2'
                                 }`}
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{
-                                    duration: 0.5,
+                                    duration: 0.1,
                                     delay: index * 0.2,
                                 }}
                             >
@@ -168,8 +184,10 @@ export default function DnsSimulator() {
                         ))}
                     </div>
 
-                    <div className="p-4 bg-gray-50 rounded-xl shadow-inner min-h-[100px]">
-                        <h3 className="font-semibold mb-2">Packet Flow:</h3>
+                    <ScrollArea className="bg-primary border-2 rounded-xl p-4 h-96 overflow-y-auto">
+                        <h3 className="font-semibold mb-2 sticky">
+                            Packet Flow:
+                        </h3>
                         {queryPath.length === 0 ? (
                             <p className="text-gray-500 italic">
                                 No query in progress
@@ -182,7 +200,7 @@ export default function DnsSimulator() {
                                         initial={{ x: -20, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
                                         transition={{ duration: 0.5 }}
-                                        className="flex flex-col gap-2 p-2 border rounded-xl bg-white shadow"
+                                        className="flex flex-col gap-2 p-2 border rounded-xl bg-primary shadow"
                                     >
                                         <div className="flex items-center gap-2">
                                             {step.type === 'query' ? (
@@ -196,7 +214,7 @@ export default function DnsSimulator() {
                                                 <strong>{step.to}</strong>
                                             </span>
                                         </div>
-                                        <div className="text-xs font-mono bg-gray-100 p-2 rounded">
+                                        <div className="bg-primary text-xs font-mono p-2 rounded">
                                             <div>
                                                 <strong>Query Packet:</strong>{' '}
                                                 {JSON.stringify(
@@ -218,7 +236,7 @@ export default function DnsSimulator() {
                                 ))}
                             </ul>
                         )}
-                    </div>
+                    </ScrollArea>
 
                     {queryResult && (
                         <Card className="mt-4">
