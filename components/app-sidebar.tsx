@@ -38,6 +38,11 @@ const items = [
         icon: AudioWaveformIcon,
     },
     {
+        title: 'DNS Resolver',
+        url: '/dns',
+        icon: NetworkIcon,
+    },
+    {
         title: 'HyperLogLog',
         url: '/hyperloglog',
         icon: SuperscriptIcon,
