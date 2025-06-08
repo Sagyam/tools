@@ -36,7 +36,9 @@ export const CardWithText: React.FC<TextCardProps> = ({
                         </CardHeader>
                     </Card>
                 </TooltipTrigger>
-                <TooltipContent>{description}</TooltipContent>
+                <TooltipContent className="bg-gray-800 text-white transition-all duration-500 ease-in-out">
+                    {description}
+                </TooltipContent>
             </Tooltip>
         </TooltipProvider>
     )

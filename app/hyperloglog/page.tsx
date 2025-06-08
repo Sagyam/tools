@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
 import {
     Ban,
@@ -249,14 +248,15 @@ const HyperLogLogDemo = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Slider
-                                defaultValue={[bucketCount]}
+                            <Input
+                                type="number"
+                                value={bucketCount}
+                                onChange={(e) =>
+                                    resetHLL(parseInt(e.target.value, 10))
+                                }
                                 min={1}
                                 max={12}
-                                step={1}
-                                onValueChange={(value) => {
-                                    resetHLL(value[0])
-                                }}
+                                className="w-full mt-2 border border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md"
                             />
                         </CardContent>
                     </Card>
@@ -362,7 +362,7 @@ const HyperLogLogDemo = () => {
                                                     'transition-all duration-1000 w-20 h-20',
                                                     index ===
                                                         hll.lastAddedBucket
-                                                        ? 'scale-105 ring-2 ring-primary bg-accent animate-pulse'
+                                                        ? 'scale-110 ring-2 ring-primary bg-blue-500 animate-pulse'
                                                         : ''
                                                 )}
                                             >
@@ -409,9 +409,9 @@ const HyperLogLogDemo = () => {
                         />
 
                         <CardWithText
-                            title={`${hll.stdError * 100}%`}
-                            subtitle={' Margin of error'}
-                            description={`The estimated count should be within ± ${hll.stdError * 100}% of the actual count.`}
+                            title={`${Math.round(hll.stdError * 100)}%`}
+                            subtitle={'Margin of error'}
+                            description={`The estimated count should be within ± ${Math.round(hll.stdError * 100)}% of the actual count.`}
                             icon={<Diff className="size-6" />}
                         />
 

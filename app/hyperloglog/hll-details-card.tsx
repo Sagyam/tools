@@ -96,13 +96,15 @@ export const HLLDetailsCard: React.FC<HLLDetailsCardProps> = ({
                     >
                         {currentRunLength + '. '}
                     </span>
+                    <br />
+                    <br />
                     {wasAdded && (
-                        <span className="text-emerald-500">
+                        <span className="my-2 text-xl font-semibold text-emerald-500">
                             The bucket was successfully updated.
                         </span>
                     )}
                     {!wasAdded && (
-                        <span className="text-rose-500">
+                        <span className="my-2 text-xl font-semibold text-rose-500">
                             The bucket was not updated.
                         </span>
                     )}
