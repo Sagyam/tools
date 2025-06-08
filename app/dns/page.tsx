@@ -122,7 +122,7 @@ export default function DnsSimulator() {
     }
 
     return (
-        <div className="p-4 w-3xl mx-auto">
+        <div className="container mx-auto p-4 space-y-4">
             <h1 className="text-3xl font-bold mb-6">DNS Server Simulator</h1>
 
             <Tabs defaultValue="query">

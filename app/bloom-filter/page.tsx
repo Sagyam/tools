@@ -174,7 +174,7 @@ const BloomFilterDemo: React.FC = () => {
     }
 
     return (
-        <Card className="w-4xl h-full p-6 space-y-4">
+        <Card className="container mx-auto p-4 space-y-4">
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Bloom Filter Demonstration</CardTitle>
                 <Button

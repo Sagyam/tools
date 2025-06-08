@@ -245,7 +245,7 @@ const CountMinSketchDemo: React.FC = () => {
     })
 
     return (
-        <div className="min-h-screen p-6 bg-primary">
+        <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-6xl mx-auto transform duration-500">
                 <h1 className="text-4xl font-bold mb-2 text-white">
                     Count-Min Sketch Demo

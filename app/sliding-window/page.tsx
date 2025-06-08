@@ -108,7 +108,7 @@ const SlidingWindowRateLimiter = () => {
     )
 
     return (
-        <div className="min-h-screen bg-primary flex items-start justify-center">
+        <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-6xl">
                 <h1 className="text-3xl font-bold text-center mb-2">
                     Sliding Window Rate Limiter

@@ -48,7 +48,7 @@ export default function LoadBalancer(): JSX.Element {
 
     return (
         <TooltipProvider>
-            <div className="p-6 space-y-6">
+            <div className="container mx-auto p-4 space-y-4">
                 <h1 className="text-2xl font-bold">Load Balancer Demo</h1>
 
                 <LBControls

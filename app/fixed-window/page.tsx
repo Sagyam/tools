@@ -108,7 +108,7 @@ const FixedWindowRateLimiter = () => {
     )
 
     return (
-        <div className="min-h-screen bg-background flex items-start justify-center">
+        <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-6xl">
                 <h1 className="text-3xl font-bold text-center my-2 p-8">
                     Fixed Window Counter Rate Limiter

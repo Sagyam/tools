@@ -97,7 +97,7 @@ export default function TokenBucketSimulator() {
         containerRef.current.offsetWidth < 500
 
     return (
-        <div className="p-4 space-y-6">
+        <div className="container mx-auto p-4 space-y-4">
             <h1 className="text-2xl font-bold text-center">
                 Token Bucket Rate Limiter Simulator
             </h1>
