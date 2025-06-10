@@ -259,10 +259,10 @@ const CachingStrategies: FC = () => {
     }, [strategy, resetSimulation])
 
     return (
-        <div className="container mx-auto p-4 space-y-4">
+        <div className="bg-primary container mx-auto p-4 space-y-4">
             <div className="max-w-7xl mx-auto">
                 <header className="text-center mb-8">
-                    <h1 className="text-4xl font-bold tracking-tight">
+                    <h1 className="text-4xl text-primary font-bold tracking-tight">
                         Interactive Caching Strategies
                     </h1>
                     <p className="mt-2 text-lg text-secondary">
@@ -271,16 +271,17 @@ const CachingStrategies: FC = () => {
                     </p>
                 </header>
 
-                <div className="flex justify-center mb-8">
-                    <div className="flex flex-wrap gap-2 rounded-lg bg-slate-800 p-1">
+                <div className="bg-primary flex justify-center mb-8">
+                    <div className="flex flex-wrap gap-2 rounded-lg p-1 border-primary border-2 ">
                         {(Object.keys(STRATEGIES) as StrategyKey[]).map((s) => (
                             <Button
                                 key={s}
                                 onClick={() => setStrategy(s)}
-                                className={`px-4 py-2 flex-1 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                                className={`px-4 py-2 flex-1 text-sm rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900
+                                ${
                                     strategy === s
-                                        ? 'bg-sky-600 text-white shadow-md'
-                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                        ? 'text-white bg-sky-600 shadow-md'
+                                        : 'hover:bg-slate-700/50'
                                 }`}
                             >
                                 {STRATEGIES[s].name}
@@ -289,12 +290,12 @@ const CachingStrategies: FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <div className="bg-primary border border-primary rounded-xl p-6">
                     <div className="mb-6 text-center">
                         <h2 className="text-2xl font-semibold text-sky-400">
                             {STRATEGIES[strategy].name}
                         </h2>
-                        <p className="mt-1 max-w-3xl mx-auto text-slate-400">
+                        <p className="mt-1 max-w-3xl mx-auto text-secondary-foreground">
                             {STRATEGIES[strategy].description}
                         </p>
                     </div>
@@ -302,15 +303,13 @@ const CachingStrategies: FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                         {/* Left Side: Controls & Visualization */}
                         <div className="space-y-6">
-                            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-                                <h3 className="font-bold mb-3 text-slate-300">
-                                    Controls
-                                </h3>
+                            <div className="bg-primary border border-primary-foreground rounded-lg p-4">
+                                <h3 className="font-bold mb-3">Controls</h3>
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="key-input"
-                                            className="text-sm font-medium text-slate-400"
+                                            className="text-sm font-medium "
                                         >
                                             Key
                                         </Label>
@@ -322,13 +321,13 @@ const CachingStrategies: FC = () => {
                                                 setKey(e.target.value)
                                             }
                                             disabled={isLoading}
-                                            className="w-full bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                            className="w-full border rounded-md px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="value-input"
-                                            className="text-sm font-medium text-slate-400"
+                                            className="text-sm font-medium"
                                         >
                                             Value (for Write)
                                         </Label>
@@ -340,7 +339,7 @@ const CachingStrategies: FC = () => {
                                                 setValue(e.target.value)
                                             }
                                             disabled={isLoading}
-                                            className="w-full bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                            className="w-full border rounded-md px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
                                         />
                                     </div>
                                 </div>
