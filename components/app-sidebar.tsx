@@ -13,6 +13,7 @@ import {
     AudioWaveformIcon,
     CalculatorIcon,
     CoinsIcon,
+    DatabaseZapIcon,
     DropletIcon,
     FilterIcon,
     NetworkIcon,
@@ -31,6 +32,11 @@ const items = [
         title: 'Bloom Filter',
         url: '/bloom-filter',
         icon: FilterIcon,
+    },
+    {
+        title: 'Caching Strategies',
+        url: '/caching-strategies',
+        icon: DatabaseZapIcon,
     },
     {
         title: 'Count-Min Sketch',
