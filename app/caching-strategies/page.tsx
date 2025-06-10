@@ -1,5 +1,16 @@
 'use client'
 
+import { DataStore } from '@/app/caching-strategies/data-store'
+import { LogPanel } from '@/app/caching-strategies/log'
+import { STRATEGIES } from '@/app/caching-strategies/strategies'
+import {
+    DataObject,
+    HighlightState,
+    LogEntry,
+    LogStatus,
+    StrategyKey,
+} from '@/app/caching-strategies/types'
+import { Button } from '@/components/ui/button'
 import {
     AppWindow,
     CheckCircle,
@@ -8,148 +19,11 @@ import {
     Layers,
     XCircle,
 } from 'lucide-react'
-import React, {
-    FC,
-    ReactNode,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-} from 'react'
-
-// --- Type Definitions ---
-type DataObject = { [key: string]: string }
-
-type StrategyKey =
-    | 'cache-aside'
-    | 'read-through'
-    | 'write-through'
-    | 'write-back'
-    | 'write-around'
-
-type LogStatus = 'info' | 'hit' | 'miss'
-
-type LogEntry = {
-    time: string
-    message: string
-    status: LogStatus
-    icon: ReactNode
-}
-
-type HighlightState = {
-    key: string | null
-    type: 'hit' | 'miss' | null
-}
-
-type StrategyInfo = {
-    name: string
-    description: string
-}
-
-// --- Helper Functions & Data ---
+import React, { FC, useCallback, useEffect, useRef, useState } from 'react'
 
 // Simulate API latency
 const sleep = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms))
-
-// --- Strategy Definitions ---
-const STRATEGIES: Record<StrategyKey, StrategyInfo> = {
-    'cache-aside': {
-        name: 'Cache-Aside (Lazy Loading)',
-        description:
-            "The application is responsible for managing the cache. It looks for an entry in the cache. If it's a miss, the application reads the data from the database and adds the data to the cache.",
-    },
-    'read-through': {
-        name: 'Read-Through',
-        description:
-            'The application treats the cache as the main data source. The cache library itself handles fetching data from the database on a cache miss. The application logic is simplified.',
-    },
-    'write-through': {
-        name: 'Write-Through',
-        description:
-            'Data is written to the cache and the database simultaneously. This provides strong data consistency but at the cost of higher write latency, as the operation only completes when both writes succeed.',
-    },
-    'write-back': {
-        name: 'Write-Back (Write-Behind)',
-        description:
-            'The application writes data to the cache, which acknowledges the write immediately. The cache then asynchronously writes the data to the database after a delay. This is very fast for writes but risks data loss if the cache fails.',
-    },
-    'write-around': {
-        name: 'Write-Around',
-        description:
-            'Data is written directly to the database, bypassing the cache entirely. Only data that is read is then added to the cache. This is useful for workloads with few re-reads of recently written data (e.g., logging).',
-    },
-}
-
-// --- Main Components ---
-
-interface DataStoreProps {
-    title: string
-    data: DataObject
-    icon: ReactNode
-    highlightKey?: string | null
-    type?: 'hit' | 'miss' | null
-}
-
-const DataStore: FC<DataStoreProps> = ({
-    title,
-    data,
-    icon,
-    highlightKey,
-    type,
-}) => (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 flex-1">
-        <div className="flex items-center mb-3 text-slate-300">
-            {icon}
-            <h3 className="font-bold ml-2 text-lg">{title}</h3>
-        </div>
-        <div className="bg-slate-900 rounded p-3 min-h-[100px] font-mono text-sm text-slate-400 space-y-1 overflow-y-auto max-h-[150px]">
-            {Object.keys(data).length === 0 ? (
-                <span className="text-slate-500 italic">empty</span>
-            ) : (
-                Object.entries(data).map(([key, value]) => (
-                    <div
-                        key={key}
-                        className={`p-1 rounded transition-colors duration-300 ${highlightKey === key ? (type === 'hit' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300') : ''}`}
-                    >
-                        <span className="text-blue-400">{key}:</span> "{value}"
-                    </div>
-                ))
-            )}
-        </div>
-    </div>
-)
-
-interface LogPanelProps {
-    logs: LogEntry[]
-}
-
-const LogPanel: FC<LogPanelProps> = ({ logs }) => {
-    const logEndRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [logs])
-
-    return (
-        <div className="bg-black/50 border border-slate-800 rounded-lg p-4 h-full">
-            <h3 className="font-bold mb-2 text-slate-300">Operation Log</h3>
-            <div className="bg-black rounded p-3 h-[95%] font-mono text-xs text-slate-400 space-y-2 overflow-y-auto">
-                {logs.map((log, i) => (
-                    <div
-                        key={i}
-                        className={`flex items-start ${log.status === 'hit' ? 'text-green-400' : log.status === 'miss' ? 'text-red-400' : 'text-slate-400'}`}
-                    >
-                        <span className="w-16 shrink-0">{log.time}</span>
-                        <span className="mr-2 mt-0.5 shrink-0">{log.icon}</span>
-                        <span>{log.message}</span>
-                    </div>
-                ))}
-                <div ref={logEndRef} />
-            </div>
-        </div>
-    )
-}
 
 // The Main App Component
 const CachingStrategies: FC = () => {
@@ -383,7 +257,7 @@ const CachingStrategies: FC = () => {
     }, [strategy, resetSimulation])
 
     return (
-        <div className="bg-slate-950 text-white min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
+        <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-7xl mx-auto">
                 <header className="text-center mb-8">
                     <h1 className="text-4xl font-bold tracking-tight text-slate-100">
@@ -398,17 +272,17 @@ const CachingStrategies: FC = () => {
                 <div className="flex justify-center mb-8">
                     <div className="flex flex-wrap gap-2 rounded-lg bg-slate-800 p-1">
                         {(Object.keys(STRATEGIES) as StrategyKey[]).map((s) => (
-                            <button
+                            <Button
                                 key={s}
                                 onClick={() => setStrategy(s)}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                                     strategy === s
                                         ? 'bg-sky-600 text-white shadow-md'
                                         : 'text-slate-300 hover:bg-slate-700/50'
                                 }`}
                             >
                                 {STRATEGIES[s].name}
-                            </button>
+                            </Button>
                         ))}
                     </div>
                 </div>
@@ -521,9 +395,8 @@ const CachingStrategies: FC = () => {
                         </div>
 
                         {/* Right Side: Logs */}
-                        <div className="min-h-[600px]">
-                            <LogPanel logs={logs} />
-                        </div>
+
+                        <LogPanel logs={logs} />
                     </div>
                 </div>
             </div>
