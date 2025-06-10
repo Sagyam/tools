@@ -1,10 +1,16 @@
 import { LogPanelProps } from '@/app/caching-strategies/types'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { FC } from 'react'
+import { FC, useEffect, useRef } from 'react'
 
 export const LogPanel: FC<LogPanelProps> = ({ logs }) => {
+    const logEndRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [logs])
+
     return (
-        <ScrollArea className="bg-primary border border-slate-800 rounded-lg p-4 h-[600px]">
+        <ScrollArea className="bg-slate-900 border border-slate-800 rounded-lg p-4 h-[650px] sm:h-32 md:h-32">
             <h3 className="font-bold mb-2 text-slate-300">Operation Log</h3>
             <div className="bg-black rounded p-3 h-[95%] font-mono text-xs text-slate-400 space-y-2 overflow-y-auto">
                 {logs.map((log, i) => (
@@ -17,6 +23,7 @@ export const LogPanel: FC<LogPanelProps> = ({ logs }) => {
                         <span>{log.message}</span>
                     </div>
                 ))}
+                <div ref={logEndRef} />
             </div>
         </ScrollArea>
     )

@@ -2,7 +2,7 @@ import { StrategyInfo, StrategyKey } from '@/app/caching-strategies/types'
 
 export const STRATEGIES: Record<StrategyKey, StrategyInfo> = {
     'cache-aside': {
-        name: 'Cache-Aside (Lazy Loading)',
+        name: 'Cache-Aside',
         description:
             "The application is responsible for managing the cache. It looks for an entry in the cache. If it's a miss, the application reads the data from the database and adds the data to the cache.",
     },

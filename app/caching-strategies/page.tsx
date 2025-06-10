@@ -11,6 +11,8 @@ import {
     StrategyKey,
 } from '@/app/caching-strategies/types'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     AppWindow,
     CheckCircle,
@@ -260,10 +262,10 @@ const CachingStrategies: FC = () => {
         <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-7xl mx-auto">
                 <header className="text-center mb-8">
-                    <h1 className="text-4xl font-bold tracking-tight text-slate-100">
+                    <h1 className="text-4xl font-bold tracking-tight">
                         Interactive Caching Strategies
                     </h1>
-                    <p className="mt-2 text-lg text-slate-400">
+                    <p className="mt-2 text-lg text-secondary">
                         Visualize how different caching patterns work in
                         real-time.
                     </p>
@@ -275,7 +277,7 @@ const CachingStrategies: FC = () => {
                             <Button
                                 key={s}
                                 onClick={() => setStrategy(s)}
-                                className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                                className={`px-4 py-2 flex-1 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
                                     strategy === s
                                         ? 'bg-sky-600 text-white shadow-md'
                                         : 'text-slate-300 hover:bg-slate-700/50'
@@ -287,7 +289,7 @@ const CachingStrategies: FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl shadow-slate-950/50 p-6">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                     <div className="mb-6 text-center">
                         <h2 className="text-2xl font-semibold text-sky-400">
                             {STRATEGIES[strategy].name}
@@ -306,13 +308,13 @@ const CachingStrategies: FC = () => {
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label
+                                        <Label
                                             htmlFor="key-input"
                                             className="text-sm font-medium text-slate-400"
                                         >
                                             Key
-                                        </label>
-                                        <input
+                                        </Label>
+                                        <Input
                                             id="key-input"
                                             type="text"
                                             value={key}
@@ -324,13 +326,13 @@ const CachingStrategies: FC = () => {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label
+                                        <Label
                                             htmlFor="value-input"
                                             className="text-sm font-medium text-slate-400"
                                         >
                                             Value (for Write)
-                                        </label>
-                                        <input
+                                        </Label>
+                                        <Input
                                             id="value-input"
                                             type="text"
                                             value={value}
@@ -343,14 +345,14 @@ const CachingStrategies: FC = () => {
                                     </div>
                                 </div>
                                 <div className="mt-4 flex flex-wrap gap-3">
-                                    <button
+                                    <Button
                                         onClick={handleRead}
                                         disabled={isLoading || !key}
                                         className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-all duration-200"
                                     >
                                         {isLoading ? 'Running...' : 'Read Data'}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         onClick={handleWrite}
                                         disabled={isLoading || !key || !value}
                                         className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-all duration-200"
@@ -358,14 +360,14 @@ const CachingStrategies: FC = () => {
                                         {isLoading
                                             ? 'Running...'
                                             : 'Write Data'}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         onClick={resetSimulation}
                                         disabled={isLoading}
                                         className="flex-1 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-200"
                                     >
                                         Reset
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
 
