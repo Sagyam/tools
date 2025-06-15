@@ -1,15 +1,15 @@
 'use client'
 
-import { DataStore } from '@/app/caching-strategies/data-store'
-import { LogPanel } from '@/app/caching-strategies/log'
-import { STRATEGIES } from '@/app/caching-strategies/strategies'
+import { DataStore } from '@/app/caching/data-store'
+import { LogPanel } from '@/app/caching/log'
+import { STRATEGIES } from '@/app/caching/strategies'
 import {
     DataObject,
     HighlightState,
     LogEntry,
     LogStatus,
     StrategyKey,
-} from '@/app/caching-strategies/types'
+} from '@/app/caching/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +21,7 @@ import {
     Layers,
     XCircle,
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import React, { FC, useCallback, useEffect, useRef, useState } from 'react'
 
 // Simulate API latency
@@ -48,6 +49,15 @@ const CachingStrategies: FC = () => {
         key: null,
         type: null,
     })
+    const params = useSearchParams()
+    const initialStrategy = (params.get('strategy') ||
+        'cache-aside') as StrategyKey
+
+    useEffect(() => {
+        if (initialStrategy && STRATEGIES[initialStrategy]) {
+            setStrategy(initialStrategy)
+        }
+    }, [initialStrategy])
 
     const writeBackQueue = useRef<Map<string, string>>(new Map())
 

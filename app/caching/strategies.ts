@@ -1,4 +1,4 @@
-import { StrategyInfo, StrategyKey } from '@/app/caching-strategies/types'
+import { StrategyInfo, StrategyKey } from '@/app/caching/types'
 
 export const STRATEGIES: Record<StrategyKey, StrategyInfo> = {
     'cache-aside': {

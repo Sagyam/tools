@@ -1,4 +1,4 @@
-import { LogPanelProps } from '@/app/caching-strategies/types'
+import { LogPanelProps } from '@/app/caching/types'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FC, useEffect, useRef } from 'react'
 

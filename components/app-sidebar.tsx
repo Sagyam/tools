@@ -35,7 +35,7 @@ const items = [
     },
     {
         title: 'Caching Strategies',
-        url: '/caching-strategies',
+        url: '/caching',
         icon: DatabaseZapIcon,
     },
     {

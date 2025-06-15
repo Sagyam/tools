@@ -1,4 +1,4 @@
-import { DataStoreProps } from '@/app/caching-strategies/types'
+import { DataStoreProps } from '@/app/caching/types'
 import { FC } from 'react'
 
 export const DataStore: FC<DataStoreProps> = ({
