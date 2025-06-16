@@ -22,11 +22,9 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
-    "@xyflow/react": "^12.6.4",
     "bloom-filters": "^3.0.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "d3": "^7.9.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.454.0",
     "murmurhash3js": "^3.0.1",
@@ -41,18 +39,17 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.8",
-    "@types/d3": "^7.4.3",
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/murmurhash3js": "^3.0.7",
-    "@types/node": "^20.17.57",
+    "@types/node": "^20.19.0",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "eslint": "^9.28.0",
+    "eslint": "^9.29.0",
     "eslint-config-next": "14.2.16",
     "eslint-config-prettier": "^9.1.0",
-    "postcss": "^8.5.4",
+    "postcss": "^8.5.5",
     "prettier": "3.3.3",
-    "tailwindcss": "^4.1.8",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3"
   }
 }
