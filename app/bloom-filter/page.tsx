@@ -48,10 +48,12 @@ class BloomFilter {
     public calculateFalseProbability(numInsertedItems: number): number {
         const m = this.size // Total bits in array
         const k = this.hashFunctions // Number of hash functions
-        const n = numInsertedItems // Number of inserted items
-
+        // Number of inserted items
         // p = (1 - e^(-k*n/m))^k
-        const falseProbability = Math.pow(1 - Math.exp((-k * n) / m), k)
+        const falseProbability = Math.pow(
+            1 - Math.exp((-k * numInsertedItems) / m),
+            k
+        )
 
         return falseProbability * 100
     }

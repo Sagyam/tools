@@ -214,7 +214,7 @@ const BloomFilterCalculator: React.FC = () => {
                 <CardTitle>Bloom Filter Calculator</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 my-4">
                     {/* Number of Items (n) */}
                     <div className="space-y-2">
                         <Label>n - Number of Items</Label>
@@ -313,7 +313,7 @@ const BloomFilterCalculator: React.FC = () => {
                 </div>
 
                 {/* Calculated Parameters */}
-                <div className="grid grid-cols-1 gap-4 mb-4 bg-muted p-4 rounded text-center">
+                <div className="grid sm:grid-cols-1 flex-col-2 gap-4 mb-4 bg-muted p-4 rounded text-center">
                     <div>
                         <strong>Chance of a mistake</strong>{' '}
                         <kbd>(false positive)</kbd>:{' '}
@@ -322,27 +322,36 @@ const BloomFilterCalculator: React.FC = () => {
                 </div>
 
                 {/* Graph Selection */}
-                <div className="flex space-x-2 mb-4">
+                <div className="flex flex-wrap space-x-2 mb-4">
                     <Button
-                        variant={
-                            selectedGraph === 'p_vs_n' ? 'default' : 'outline'
-                        }
+                        variant={'outline'}
+                        className={`${
+                            selectedGraph === 'p_vs_n'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-primary text-primary-foreground'
+                        }`}
                         onClick={() => setSelectedGraph('p_vs_n')}
                     >
                         False Positive Rate vs Number of Items
                     </Button>
                     <Button
-                        variant={
-                            selectedGraph === 'p_vs_k' ? 'default' : 'outline'
-                        }
+                        variant={'outline'}
+                        className={`${
+                            selectedGraph === 'p_vs_k'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-primary text-primary-foreground'
+                        }`}
                         onClick={() => setSelectedGraph('p_vs_k')}
                     >
                         False Positive Rate vs Hash Functions
                     </Button>
                     <Button
-                        variant={
-                            selectedGraph === 'p_vs_m' ? 'default' : 'outline'
-                        }
+                        variant={'outline'}
+                        className={`${
+                            selectedGraph === 'p_vs_m'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-primary text-primary-foreground'
+                        }`}
                         onClick={() => setSelectedGraph('p_vs_m')}
                     >
                         False Positive Rate vs Filter Size

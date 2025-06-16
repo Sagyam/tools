@@ -21,7 +21,6 @@ import {
     Layers,
     XCircle,
 } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
 import React, { FC, useCallback, useEffect, useRef, useState } from 'react'
 
 // Simulate API latency
@@ -49,15 +48,6 @@ const CachingStrategies: FC = () => {
         key: null,
         type: null,
     })
-    const params = useSearchParams()
-    const initialStrategy = (params.get('strategy') ||
-        'cache-aside') as StrategyKey
-
-    useEffect(() => {
-        if (initialStrategy && STRATEGIES[initialStrategy]) {
-            setStrategy(initialStrategy)
-        }
-    }, [initialStrategy])
 
     const writeBackQueue = useRef<Map<string, string>>(new Map())
 
@@ -267,6 +257,14 @@ const CachingStrategies: FC = () => {
     useEffect(() => {
         resetSimulation()
     }, [strategy, resetSimulation])
+
+    useEffect(() => {
+        // check if url has a query parameter for strategy
+        const urlParams = new URLSearchParams(window.location.search)
+        const urlStrategy: StrategyKey =
+            (urlParams.get('strategy') as StrategyKey) || 'cache-aside'
+        setStrategy(urlStrategy)
+    }, [])
 
     return (
         <div className="bg-primary container mx-auto p-4 space-y-4">
