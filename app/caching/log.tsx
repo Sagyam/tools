@@ -24,10 +24,9 @@ export const LogPanel: FC<LogPanelProps> = ({ logs }) => {
                     >
                         <span className="w-16 shrink-0">{log.time}</span>
                         <span className="mr-2 shrink-0">{log.icon}</span>
-                        <span>{log.message}</span>
+                        <span ref={logEndRef}>{log.message}</span>
                     </div>
                 ))}
-                <div ref={logEndRef} />
             </div>
         </ScrollArea>
     )
