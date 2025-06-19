@@ -8,6 +8,7 @@ export type StrategyKey =
     | 'write-through'
     | 'write-back'
     | 'write-around'
+    | 'refresh-ahead'
 
 export type LogStatus = 'info' | 'hit' | 'miss'
 
@@ -38,4 +39,6 @@ export interface DataStoreProps {
     icon: ReactNode
     highlightKey?: string | null
     type?: 'hit' | 'miss' | null
+    cacheTimers?: Record<string, number>
+    showTimers?: boolean
 }

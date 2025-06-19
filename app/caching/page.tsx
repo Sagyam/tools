@@ -27,6 +27,13 @@ import React, { FC, useCallback, useEffect, useRef, useState } from 'react'
 const sleep = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms))
 
+// Cache entry with expiration tracking for refresh-ahead
+interface CacheEntry {
+    value: string
+    accessTime: number
+    lastRefresh: number
+}
+
 // The Main App Component
 const CachingStrategies: FC = () => {
     const [strategy, setStrategy] = useState<StrategyKey>('cache-aside')
@@ -50,6 +57,33 @@ const CachingStrategies: FC = () => {
     })
 
     const writeBackQueue = useRef<Map<string, string>>(new Map())
+    const refreshAheadCache = useRef<Map<string, CacheEntry>>(new Map())
+    const refreshThreshold = 5000 // 5 seconds before considering refresh
+    const [cacheTimers, setCacheTimers] = useState<Record<string, number>>({})
+
+    // Initialize refresh-ahead cache with timers
+    useEffect(() => {
+        if (strategy === 'refresh-ahead') {
+            const now = Date.now()
+            refreshAheadCache.current.set('user1', {
+                value: 'Alice',
+                accessTime: now,
+                lastRefresh: now,
+            })
+            refreshAheadCache.current.set('item5', {
+                value: 'Laptop',
+                accessTime: now,
+                lastRefresh: now,
+            })
+            // Set initial timers
+            setCacheTimers({
+                user1: now,
+                item5: now,
+            })
+        } else {
+            setCacheTimers({})
+        }
+    }, [strategy])
 
     const addLog = (message: string, status: LogStatus = 'info') => {
         const iconMap = {
@@ -62,6 +96,24 @@ const CachingStrategies: FC = () => {
             ...prev,
             { time, message, status, icon: iconMap[status] },
         ])
+    }
+
+    const refreshDataInBackground = async (key: string) => {
+        await sleep(800) // Simulate DB fetch time
+        const dbValue = db[key]
+        if (dbValue !== undefined) {
+            const now = Date.now()
+            refreshAheadCache.current.set(key, {
+                value: dbValue,
+                accessTime: now,
+                lastRefresh: now,
+            })
+            setCache((c) => ({ ...c, [key]: dbValue }))
+            setCacheTimers((prev) => ({ ...prev, [key]: now }))
+            addLog(
+                `(Background) Cache: Refreshed data for key "${key}" from DB.`
+            )
+        }
     }
 
     const handleRead = useCallback(async () => {
@@ -123,6 +175,62 @@ const CachingStrategies: FC = () => {
                             `Cache: Found data in DB. Populating cache & returning to app.`
                         )
                         setCache((c) => ({ ...c, [key]: dbValue }))
+                    } else {
+                        addLog(`Cache: Key "${key}" not found in DB.`)
+                    }
+                }
+                break
+
+            case 'refresh-ahead':
+                addLog(`App: Querying cache for key: "${key}"`)
+                await sleep(500)
+
+                const cacheEntry = refreshAheadCache.current.get(key)
+                const now = Date.now()
+
+                if (cacheEntry) {
+                    addLog(
+                        `Cache HIT for key: "${key}". Returning cached data.`,
+                        'hit'
+                    )
+                    setHighlight({ key, type: 'hit' })
+
+                    // Update access time
+                    refreshAheadCache.current.set(key, {
+                        ...cacheEntry,
+                        accessTime: now,
+                    })
+
+                    // Check if refresh is needed (data is getting old)
+                    const timeSinceRefresh = now - cacheEntry.lastRefresh
+                    if (timeSinceRefresh > refreshThreshold) {
+                        addLog(
+                            `Cache: Data for "${key}" is ${Math.round(timeSinceRefresh / 1000)}s old. Triggering background refresh...`
+                        )
+                        // Trigger async refresh
+                        setTimeout(() => refreshDataInBackground(key), 100)
+                    }
+                } else {
+                    addLog(
+                        `Cache MISS for key: "${key}". Loading from database.`,
+                        'miss'
+                    )
+                    setHighlight({ key, type: 'miss' })
+                    await sleep(500)
+                    addLog('Cache: Fetching from database...')
+                    await sleep(1000)
+                    const dbValue = db[key]
+                    if (dbValue !== undefined) {
+                        addLog(
+                            `Cache: Found data in DB. Caching for future requests.`
+                        )
+                        refreshAheadCache.current.set(key, {
+                            value: dbValue,
+                            accessTime: now,
+                            lastRefresh: now,
+                        })
+                        setCache((c) => ({ ...c, [key]: dbValue }))
+                        setCacheTimers((prev) => ({ ...prev, [key]: now }))
                     } else {
                         addLog(`Cache: Key "${key}" not found in DB.`)
                     }
@@ -232,6 +340,27 @@ const CachingStrategies: FC = () => {
                     'DB: Acknowledged. Write operation complete. Cache is unaffected.'
                 )
                 break
+
+            case 'refresh-ahead':
+                addLog('App: Writing to cache only (Write-Aside pattern)...')
+                await sleep(500)
+                const now = Date.now()
+                refreshAheadCache.current.set(key, {
+                    value: value,
+                    accessTime: now,
+                    lastRefresh: now,
+                })
+                setCache((c) => ({ ...c, [key]: value }))
+                setCacheTimers((prev) => ({ ...prev, [key]: now }))
+                addLog(
+                    'Cache: Acknowledged. Database will be updated on next read if needed.'
+                )
+                addLog(
+                    'App: Write complete! (Database remains unchanged until cache refresh)'
+                )
+                // Update the database to simulate the "new" data
+                setDb((d) => ({ ...d, [key]: value }))
+                break
         }
 
         addLog(`--- WRITE operation for key: "${key}" complete ---`)
@@ -251,6 +380,8 @@ const CachingStrategies: FC = () => {
         setValue('Bob')
         setIsLoading(false)
         writeBackQueue.current.clear()
+        refreshAheadCache.current.clear()
+        setCacheTimers({})
         addLog('Simulation reset to initial state.')
     }, [])
 
@@ -375,6 +506,25 @@ const CachingStrategies: FC = () => {
                                     >
                                         Reset
                                     </Button>
+                                    {strategy === 'refresh-ahead' && (
+                                        <Button
+                                            onClick={() => {
+                                                // Simulate database changes to show stale data
+                                                setDb((prev) => ({
+                                                    ...prev,
+                                                    user1: 'Alice (Updated)',
+                                                    item5: 'Laptop Pro',
+                                                }))
+                                                addLog(
+                                                    '🔄 Database updated! Cache data is now stale.'
+                                                )
+                                            }}
+                                            disabled={isLoading}
+                                            className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:bg-slate-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-200"
+                                        >
+                                            Simulate DB Change
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
 
@@ -392,6 +542,8 @@ const CachingStrategies: FC = () => {
                                     }
                                     highlightKey={highlight.key}
                                     type={highlight.type}
+                                    cacheTimers={cacheTimers}
+                                    showTimers={strategy === 'refresh-ahead'}
                                 />
                                 <DataStore
                                     title="Database"

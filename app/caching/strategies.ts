@@ -26,4 +26,9 @@ export const STRATEGIES: Record<StrategyKey, StrategyInfo> = {
         description:
             'Data is written directly to the database, bypassing the cache entirely. Only data that is read is then added to the cache. This is useful for workloads with few re-reads of recently written data (e.g., logging).',
     },
+    'refresh-ahead': {
+        name: 'Refresh-Ahead',
+        description:
+            'Cache entries are proactively refreshed before they expire, based on access patterns. When data is accessed and is close to expiring, the cache triggers an asynchronous refresh from the database. This ensures fresh data with minimal latency.',
+    },
 }
