@@ -10,7 +10,19 @@ export const LogPanel: FC<LogPanelProps> = ({ logs }) => {
     useEffect(() => {
         if (logs.length < 2) return
 
-        logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        // Check if an element is in viewport
+        const isInViewport = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect()
+            return rect.top >= 0 && rect.bottom <= window.innerHeight
+        }
+
+        // Only scroll if log panel is visible
+        if (logEndRef.current && isInViewport(logEndRef.current)) {
+            logEndRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+            })
+        }
     }, [logs])
 
     return (
