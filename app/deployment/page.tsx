@@ -738,54 +738,141 @@ const DeploymentStrategiesApp = () => {
                 <div className="bg-gray-50 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
                         <Server className="w-5 h-5" />
-                        Instance Status
+                        Infrastructure View
                     </h3>
 
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {instances.map((instance) => (
-                            <div key={instance.id} className="relative group">
-                                <div
-                                    className={`${getInstanceColor(instance)} rounded-lg p-4 text-white text-center transition-all duration-300 ${
-                                        instance.status === 'unhealthy'
-                                            ? 'animate-pulse'
-                                            : ''
-                                    }`}
-                                >
-                                    <Server className="w-8 h-8 mx-auto mb-2" />
-                                    <div className="text-xs font-medium">
-                                        {instance.version}
-                                    </div>
-                                    <div className="text-xs opacity-75">
-                                        Pod {instance.id + 1}
-                                    </div>
-                                </div>
-
-                                {/* Traffic Indicator */}
-                                {instance.traffic > 0 && (
-                                    <div className="mt-2 bg-gray-200 rounded-full h-2">
-                                        <div
-                                            className="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                                            style={{
-                                                width: `${instance.traffic}%`,
-                                            }}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Status Icon */}
-                                <div className="absolute -top-2 -right-2">
-                                    {instance.status === 'healthy' && (
-                                        <CheckCircle className="w-5 h-5 text-green-500 bg-white rounded-full" />
-                                    )}
-                                    {instance.status === 'unhealthy' && (
-                                        <XCircle className="w-5 h-5 text-red-500 bg-white rounded-full" />
-                                    )}
-                                    {instance.status === 'shadow' && (
-                                        <Users className="w-5 h-5 text-purple-500 bg-white rounded-full" />
-                                    )}
-                                </div>
+                    <div className="flex flex-col items-center">
+                        {/* User Traffic */}
+                        <div className="text-center mb-4">
+                            <div className="flex justify-center gap-2 mb-2">
+                                <Users className="w-6 h-6 text-gray-600" />
+                                <Users className="w-6 h-6 text-gray-600" />
+                                <Users className="w-6 h-6 text-gray-600" />
                             </div>
-                        ))}
+                            <span className="text-sm text-gray-600 font-medium">
+                                User Traffic
+                            </span>
+                        </div>
+
+                        {/* Arrow down */}
+                        <div className="w-1 h-8 bg-gray-400 relative">
+                            <div className="absolute -bottom-2 -left-2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-gray-400"></div>
+                        </div>
+
+                        {/* Load Balancer */}
+                        <div className="bg-blue-600 rounded-lg p-4 mb-8 shadow-lg relative">
+                            <div className="flex gap-3 items-center">
+                                <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                                <div className="w-3 h-3 bg-white rounded-full animate-pulse delay-75"></div>
+                                <div className="w-3 h-3 bg-white rounded-full animate-pulse delay-150"></div>
+                            </div>
+                            <div className="text-white text-sm font-medium mt-2">
+                                Load Balancer
+                            </div>
+                        </div>
+
+                        {/* Traffic Distribution */}
+                        <div className="w-full flex justify-center gap-8 mb-4">
+                            {(() => {
+                                // Calculate traffic distribution by version
+                                const versionGroups = instances.reduce(
+                                    (acc, instance) => {
+                                        const version =
+                                            instance.version.split(' ')[0] // Handle shadow versions
+                                        if (!acc[version]) {
+                                            acc[version] = {
+                                                instances: [],
+                                                totalTraffic: 0,
+                                            }
+                                        }
+                                        acc[version].instances.push(instance)
+                                        acc[version].totalTraffic +=
+                                            instance.traffic || 0
+                                        return acc
+                                    },
+                                    {}
+                                )
+
+                                return Object.entries(versionGroups).map(
+                                    ([version, data], index) => (
+                                        <div
+                                            key={version}
+                                            className="flex flex-col items-center flex-1 max-w-xs"
+                                        >
+                                            {/* Traffic Arrow with Percentage */}
+                                            <div className="relative mb-4">
+                                                <div className="w-1 h-12 bg-gray-400 mx-auto">
+                                                    <div className="absolute -bottom-2 -left-2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-gray-400"></div>
+                                                </div>
+                                                <div className="absolute top-1/2 -translate-y-1/2 -right-12 bg-white px-2 py-1 rounded shadow-md">
+                                                    <span className="font-bold text-sm">
+                                                        {data.totalTraffic.toFixed(
+                                                            1
+                                                        )}
+                                                        %
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Server Group */}
+                                            <div className="w-full">
+                                                <div className="text-center mb-2">
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        {version}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {data.instances.map(
+                                                        (instance) => (
+                                                            <div
+                                                                key={
+                                                                    instance.id
+                                                                }
+                                                                className="relative"
+                                                            >
+                                                                <div
+                                                                    className={`${getInstanceColor(instance)} rounded p-2 text-white text-center transition-all duration-300 ${
+                                                                        instance.status ===
+                                                                        'unhealthy'
+                                                                            ? 'animate-pulse'
+                                                                            : ''
+                                                                    } ${instance.status === 'terminating' ? 'opacity-50' : ''}`}
+                                                                >
+                                                                    <div className="flex flex-col items-center">
+                                                                        <div className="w-6 h-4 bg-white bg-opacity-20 rounded-sm mb-1"></div>
+                                                                        <div className="w-6 h-4 bg-white bg-opacity-20 rounded-sm mb-1"></div>
+                                                                        <div className="text-xs opacity-90">
+                                                                            {instance.id +
+                                                                                1}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Status Icon */}
+                                                                <div className="absolute -top-1 -right-1">
+                                                                    {instance.status ===
+                                                                        'healthy' && (
+                                                                        <CheckCircle className="w-4 h-4 text-green-500 bg-white rounded-full" />
+                                                                    )}
+                                                                    {instance.status ===
+                                                                        'unhealthy' && (
+                                                                        <XCircle className="w-4 h-4 text-red-500 bg-white rounded-full" />
+                                                                    )}
+                                                                    {instance.status ===
+                                                                        'shadow' && (
+                                                                        <Users className="w-4 h-4 text-purple-500 bg-white rounded-full" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                )
+                            })()}
+                        </div>
                     </div>
                 </div>
 
