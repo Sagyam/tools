@@ -1,11 +1,18 @@
 'use client'
 
 import {
+    Config,
+    Instance,
+    Log,
+    Metrics,
+    Strategy,
+    StrategyInfo,
+} from '@/app/deployment/deployment-types'
+import {
     Activity,
     CheckCircle,
     Pause,
     Play,
-    RotateCcw,
     Server,
     Settings,
     Terminal,
@@ -15,29 +22,58 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 
-const DeploymentStrategiesApp = () => {
-    const [activeTab, setActiveTab] = useState('rolling')
-    const [isDeploying, setIsDeploying] = useState(false)
-    const [deploymentProgress, setDeploymentProgress] = useState(0)
-    const [instances, setInstances] = useState([])
-    const [traffic, setTraffic] = useState({})
-    const [metrics, setMetrics] = useState({ errorRate: 0, responseTime: 200 })
-    const [currentVersion, setCurrentVersion] = useState(1)
-    const [targetVersion, setTargetVersion] = useState(2)
-    const [logs, setLogs] = useState([])
-    const [config, setConfig] = useState({
+// Switch component
+const Switch: React.FC<{
+    checked: boolean
+    onChange: (checked: boolean) => void
+    disabled?: boolean
+}> = ({ checked, onChange, disabled = false }) => {
+    return (
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                checked ? 'bg-blue-600' : 'bg-gray-200'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            onClick={() => !disabled && onChange(!checked)}
+            disabled={disabled}
+        >
+            <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    checked ? 'translate-x-6' : 'translate-x-1'
+                }`}
+            />
+        </button>
+    )
+}
+
+const DeploymentStrategiesApp: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<Strategy>('rolling')
+    const [isDeploying, setIsDeploying] = useState<boolean>(false)
+    const [deploymentProgress, setDeploymentProgress] = useState<number>(0)
+    const [instances, setInstances] = useState<Instance[]>([])
+    const [metrics, setMetrics] = useState<Metrics>({
+        errorRate: 0,
+        responseTime: 200,
+    })
+    const [currentVersion, setCurrentVersion] = useState<number>(1)
+    const [targetVersion, setTargetVersion] = useState<number>(2)
+    const [logs, setLogs] = useState<Log[]>([])
+    const [config, setConfig] = useState<Config>({
         totalInstances: 6,
         batchSize: 2,
         canaryPercentage: 20,
         buggyVersion: false,
         errorThreshold: 10,
         rollbackEnabled: true,
+        autoPromote: false,
         deploymentSpeed: 1000,
+        manualTrafficSplit: undefined,
     })
-    const intervalRef = useRef(null)
-    const logsEndRef = useRef(null)
+    const intervalRef = useRef<NodeJS.Timeout | null>(null)
+    const logsEndRef = useRef<HTMLDivElement | null>(null)
+    const promoteCheckRef = useRef<boolean>(false)
 
-    const strategies = [
+    const strategies: StrategyInfo[] = [
         { id: 'rolling', name: 'Rolling Update', icon: '🔄' },
         { id: 'bluegreen', name: 'Blue/Green', icon: '🔵🟢' },
         { id: 'canary', name: 'Canary', icon: '🐤' },
@@ -57,16 +93,28 @@ const DeploymentStrategiesApp = () => {
                 updateDeployment()
             }, config.deploymentSpeed)
         } else {
-            clearInterval(intervalRef.current)
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
         }
-        return () => clearInterval(intervalRef.current)
-    }, [isDeploying, deploymentProgress, activeTab, targetVersion])
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+            }
+        }
+    }, [
+        isDeploying,
+        deploymentProgress,
+        activeTab,
+        targetVersion,
+        config.autoPromote,
+    ])
 
     useEffect(() => {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [logs])
 
-    const addLog = (message, type = 'info') => {
+    const addLog = (message: string, type: Log['type'] = 'info'): void => {
         const timestamp = new Date().toLocaleTimeString()
         const logTypes = {
             info: { icon: '📘', color: 'text-blue-600' },
@@ -81,7 +129,7 @@ const DeploymentStrategiesApp = () => {
         setLogs((prev) => [
             ...prev,
             {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 timestamp,
                 message,
                 type,
@@ -91,8 +139,8 @@ const DeploymentStrategiesApp = () => {
         ])
     }
 
-    const initializeInstances = () => {
-        const newInstances = Array.from(
+    const initializeInstances = (): void => {
+        const newInstances: Instance[] = Array.from(
             { length: config.totalInstances },
             (_, i) => ({
                 id: i,
@@ -104,17 +152,19 @@ const DeploymentStrategiesApp = () => {
         setInstances(newInstances)
         setDeploymentProgress(0)
         setMetrics({ errorRate: 0, responseTime: 200 })
+        promoteCheckRef.current = false
         addLog(
             `Initialized ${config.totalInstances} instances with version v${currentVersion}.0`,
             'info'
         )
     }
 
-    const startDeployment = () => {
+    const startDeployment = (): void => {
         setIsDeploying(true)
         setTargetVersion(currentVersion + 1)
+        promoteCheckRef.current = false
         addLog(
-            `Starting ${strategies.find((s) => s.id === activeTab).name} deployment from v${currentVersion}.0 to v${currentVersion + 1}.0`,
+            `Starting ${strategies.find((s) => s.id === activeTab)?.name} deployment from v${currentVersion}.0 to v${currentVersion + 1}.0`,
             'deployment'
         )
 
@@ -128,23 +178,37 @@ const DeploymentStrategiesApp = () => {
                 'info'
             )
         }
+
+        if (config.autoPromote) {
+            addLog(
+                `Auto-promote enabled when error rate < ${config.errorThreshold}%`,
+                'info'
+            )
+        }
     }
 
-    const updateDeployment = () => {
+    const updateDeployment = (): void => {
         if (deploymentProgress >= 100) {
-            setIsDeploying(false)
-            setCurrentVersion(targetVersion)
-            addLog(
-                `Deployment completed successfully! All instances now running v${targetVersion}.0`,
-                'success'
-            )
+            if (
+                config.autoPromote &&
+                metrics.errorRate < config.errorThreshold &&
+                !promoteCheckRef.current
+            ) {
+                promoteCheckRef.current = true
+                addLog(
+                    `✅ Error rate (${metrics.errorRate.toFixed(1)}%) below threshold. Auto-promoting deployment!`,
+                    'success'
+                )
+                completeDeployment()
+            } else if (!config.autoPromote) {
+                completeDeployment()
+            }
             return
         }
 
         const newProgress = Math.min(deploymentProgress + 5, 100)
         setDeploymentProgress(newProgress)
 
-        // Simulate metrics
         if (config.buggyVersion && newProgress > 30) {
             const errorRate = Math.min(25, newProgress / 4)
             setMetrics({
@@ -159,14 +223,18 @@ const DeploymentStrategiesApp = () => {
                 )
             }
 
-            // Auto-rollback if threshold exceeded
             if (config.rollbackEnabled && errorRate > config.errorThreshold) {
                 performRollback()
                 return
             }
+        } else {
+            const errorRate = Math.max(0, 2 - newProgress / 50)
+            setMetrics({
+                errorRate,
+                responseTime: 200,
+            })
         }
 
-        // Update instances based on strategy
         switch (activeTab) {
             case 'rolling':
                 updateRollingDeployment(newProgress)
@@ -192,7 +260,16 @@ const DeploymentStrategiesApp = () => {
         }
     }
 
-    const updateRollingDeployment = (progress) => {
+    const completeDeployment = (): void => {
+        setIsDeploying(false)
+        setCurrentVersion(targetVersion)
+        addLog(
+            `Deployment completed successfully! All instances now running v${targetVersion}.0`,
+            'success'
+        )
+    }
+
+    const updateRollingDeployment = (progress: number): void => {
         const instancesPerBatch = Math.ceil(
             config.totalInstances / config.batchSize
         )
@@ -224,13 +301,12 @@ const DeploymentStrategiesApp = () => {
         })
     }
 
-    const updateBlueGreenDeployment = (progress) => {
+    const updateBlueGreenDeployment = (progress: number): void => {
         if (progress === 5) {
             addLog('Preparing Green environment with new version', 'info')
         }
 
         if (progress < 50) {
-            // Prepare green environment
             setInstances((prevInstances) =>
                 prevInstances.map((instance, idx) => ({
                     ...instance,
@@ -250,7 +326,6 @@ const DeploymentStrategiesApp = () => {
                 'Switching traffic from Blue to Green environment',
                 'deployment'
             )
-            // Switch traffic to green
             setInstances((prevInstances) =>
                 prevInstances.map((instance, idx) => ({
                     ...instance,
@@ -263,11 +338,14 @@ const DeploymentStrategiesApp = () => {
         }
     }
 
-    const updateCanaryDeployment = (progress) => {
+    const updateCanaryDeployment = (progress: number): void => {
         const canaryInstances = Math.ceil(
             (config.canaryPercentage / 100) * config.totalInstances
         )
-        const canaryTraffic = (progress / 100) * config.canaryPercentage
+        const canaryTraffic =
+            config.manualTrafficSplit !== undefined
+                ? Math.min(config.manualTrafficSplit, config.canaryPercentage)
+                : (progress / 100) * config.canaryPercentage
 
         if (progress === 5) {
             addLog(
@@ -306,8 +384,11 @@ const DeploymentStrategiesApp = () => {
         )
     }
 
-    const updateABDeployment = (progress) => {
-        const abSplit = progress / 2 // 50-50 split max
+    const updateABDeployment = (progress: number): void => {
+        const abSplit =
+            config.manualTrafficSplit !== undefined
+                ? config.manualTrafficSplit
+                : progress / 2
 
         if (progress === 5) {
             addLog('Starting A/B test deployment', 'info')
@@ -341,7 +422,7 @@ const DeploymentStrategiesApp = () => {
         )
     }
 
-    const updateShadowDeployment = (progress) => {
+    const updateShadowDeployment = (progress: number): void => {
         if (progress === 5) {
             addLog(
                 'Deploying shadow instances (receiving mirrored traffic only)',
@@ -356,7 +437,7 @@ const DeploymentStrategiesApp = () => {
                         ...instance,
                         version: `v${targetVersion}.0 (shadow)`,
                         status: 'shadow',
-                        traffic: 0, // Shadow instances don't receive real traffic
+                        traffic: 0,
                     }
                 }
                 return {
@@ -367,7 +448,7 @@ const DeploymentStrategiesApp = () => {
         )
     }
 
-    const updateRampedDeployment = (progress) => {
+    const updateRampedDeployment = (progress: number): void => {
         const deployedInstances = Math.ceil(
             (progress / 100) * config.totalInstances
         )
@@ -404,17 +485,16 @@ const DeploymentStrategiesApp = () => {
         })
     }
 
-    const updateRecreateDeployment = (progress) => {
+    const updateRecreateDeployment = (progress: number): void => {
         if (progress === 5) {
             addLog('Terminating all instances...', 'warning')
         }
 
         if (progress < 50) {
-            // Terminate all instances
             setInstances((prevInstances) =>
                 prevInstances.map((instance) => ({
                     ...instance,
-                    status: 'terminating',
+                    status: 'terminating' as const,
                     traffic: 0,
                 }))
             )
@@ -422,7 +502,6 @@ const DeploymentStrategiesApp = () => {
             if (progress === 50) {
                 addLog('Creating new instances with updated version', 'info')
             }
-            // Create new instances
             setInstances((prevInstances) =>
                 prevInstances.map((instance) => ({
                     ...instance,
@@ -437,7 +516,7 @@ const DeploymentStrategiesApp = () => {
         }
     }
 
-    const performRollback = () => {
+    const performRollback = (): void => {
         setIsDeploying(false)
         addLog(
             `🚨 ERROR THRESHOLD EXCEEDED! Error rate: ${metrics.errorRate.toFixed(1)}%`,
@@ -453,18 +532,11 @@ const DeploymentStrategiesApp = () => {
         }, 1000)
     }
 
-    const handleReset = () => {
-        setIsDeploying(false)
-        initializeInstances()
-        addLog('Deployment reset by user', 'info')
-    }
-
-    const clearLogs = () => {
+    const clearLogs = (): void => {
         setLogs([])
-        addLog('Logs cleared', 'info')
     }
 
-    const getInstanceColor = (instance) => {
+    const getInstanceColor = (instance: Instance): string => {
         if (instance.status === 'unhealthy') return 'bg-red-500'
         if (instance.status === 'terminating') return 'bg-gray-400'
         if (instance.status === 'shadow') return 'bg-purple-400'
@@ -476,8 +548,8 @@ const DeploymentStrategiesApp = () => {
         return 'bg-blue-500'
     }
 
-    const getStrategyDescription = () => {
-        const descriptions = {
+    const getStrategyDescription = (): string => {
+        const descriptions: Record<Strategy, string> = {
             rolling:
                 'Gradually replaces instances in batches. Zero downtime, but mixed versions during deployment.',
             bluegreen:
@@ -562,9 +634,8 @@ const DeploymentStrategiesApp = () => {
                                     onChange={(e) =>
                                         setConfig({
                                             ...config,
-                                            totalInstances: parseInt(
-                                                e.target.value
-                                            ),
+                                            totalInstances:
+                                                parseInt(e.target.value) || 6,
                                         })
                                     }
                                     className="w-20 px-2 py-1 border rounded"
@@ -585,11 +656,37 @@ const DeploymentStrategiesApp = () => {
                                         onChange={(e) =>
                                             setConfig({
                                                 ...config,
-                                                canaryPercentage: parseInt(
-                                                    e.target.value
-                                                ),
+                                                canaryPercentage:
+                                                    parseInt(e.target.value) ||
+                                                    20,
                                             })
                                         }
+                                        className="w-20 px-2 py-1 border rounded"
+                                        disabled={isDeploying}
+                                    />
+                                </label>
+                            )}
+
+                            {(activeTab === 'canary' || activeTab === 'ab') && (
+                                <label className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">
+                                        Manual Traffic Split %
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={config.manualTrafficSplit ?? ''}
+                                        onChange={(e) =>
+                                            setConfig({
+                                                ...config,
+                                                manualTrafficSplit: e.target
+                                                    .value
+                                                    ? parseInt(e.target.value)
+                                                    : undefined,
+                                            })
+                                        }
+                                        placeholder="Auto"
                                         className="w-20 px-2 py-1 border rounded"
                                         disabled={isDeploying}
                                     />
@@ -600,16 +697,14 @@ const DeploymentStrategiesApp = () => {
                                 <span className="text-sm text-gray-600">
                                     Deploy Buggy Version
                                 </span>
-                                <input
-                                    type="checkbox"
+                                <Switch
                                     checked={config.buggyVersion}
-                                    onChange={(e) =>
+                                    onChange={(checked) =>
                                         setConfig({
                                             ...config,
-                                            buggyVersion: e.target.checked,
+                                            buggyVersion: checked,
                                         })
                                     }
-                                    className="w-5 h-5"
                                     disabled={isDeploying}
                                 />
                             </label>
@@ -618,16 +713,30 @@ const DeploymentStrategiesApp = () => {
                                 <span className="text-sm text-gray-600">
                                     Auto-Rollback
                                 </span>
-                                <input
-                                    type="checkbox"
+                                <Switch
                                     checked={config.rollbackEnabled}
-                                    onChange={(e) =>
+                                    onChange={(checked) =>
                                         setConfig({
                                             ...config,
-                                            rollbackEnabled: e.target.checked,
+                                            rollbackEnabled: checked,
                                         })
                                     }
-                                    className="w-5 h-5"
+                                    disabled={isDeploying}
+                                />
+                            </label>
+
+                            <label className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">
+                                    Auto-Promote
+                                </span>
+                                <Switch
+                                    checked={config.autoPromote}
+                                    onChange={(checked) =>
+                                        setConfig({
+                                            ...config,
+                                            autoPromote: checked,
+                                        })
+                                    }
                                     disabled={isDeploying}
                                 />
                             </label>
@@ -644,9 +753,8 @@ const DeploymentStrategiesApp = () => {
                                     onChange={(e) =>
                                         setConfig({
                                             ...config,
-                                            errorThreshold: parseInt(
-                                                e.target.value
-                                            ),
+                                            errorThreshold:
+                                                parseInt(e.target.value) || 10,
                                         })
                                     }
                                     className="w-20 px-2 py-1 border rounded"
@@ -693,7 +801,7 @@ const DeploymentStrategiesApp = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="pt-4">
                             <button
                                 onClick={() =>
                                     isDeploying
@@ -703,22 +811,16 @@ const DeploymentStrategiesApp = () => {
                                 disabled={
                                     isDeploying && deploymentProgress === 100
                                 }
-                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
                             >
                                 {isDeploying ? (
-                                    <Pause className="w-4 h-4" />
+                                    <Pause className="w-5 h-5" />
                                 ) : (
-                                    <Play className="w-4 h-4" />
+                                    <Play className="w-5 h-5" />
                                 )}
-                                {isDeploying ? 'Pause' : 'Deploy'}
-                            </button>
-
-                            <button
-                                onClick={handleReset}
-                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center gap-2"
-                            >
-                                <RotateCcw className="w-4 h-4" />
-                                Reset
+                                {isDeploying
+                                    ? 'Pause Deployment'
+                                    : 'Start Deployment'}
                             </button>
                         </div>
                     </div>
@@ -774,27 +876,31 @@ const DeploymentStrategiesApp = () => {
                         {/* Traffic Distribution */}
                         <div className="w-full flex justify-center gap-8 mb-4">
                             {(() => {
-                                // Calculate traffic distribution by version
-                                const versionGroups = instances.reduce(
-                                    (acc, instance) => {
-                                        const version =
-                                            instance.version.split(' ')[0] // Handle shadow versions
-                                        if (!acc[version]) {
-                                            acc[version] = {
-                                                instances: [],
-                                                totalTraffic: 0,
-                                            }
+                                const versionGroups = instances.reduce<
+                                    Record<
+                                        string,
+                                        {
+                                            instances: Instance[]
+                                            totalTraffic: number
                                         }
-                                        acc[version].instances.push(instance)
-                                        acc[version].totalTraffic +=
-                                            instance.traffic || 0
-                                        return acc
-                                    },
-                                    {}
-                                )
+                                    >
+                                >((acc, instance) => {
+                                    const version =
+                                        instance.version.split(' ')[0]
+                                    if (!acc[version]) {
+                                        acc[version] = {
+                                            instances: [],
+                                            totalTraffic: 0,
+                                        }
+                                    }
+                                    acc[version].instances.push(instance)
+                                    acc[version].totalTraffic +=
+                                        instance.traffic || 0
+                                    return acc
+                                }, {})
 
                                 return Object.entries(versionGroups).map(
-                                    ([version, data], index) => (
+                                    ([version, data]) => (
                                         <div
                                             key={version}
                                             className="flex flex-col items-center flex-1 max-w-xs"
