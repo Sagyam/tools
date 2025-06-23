@@ -18,6 +18,7 @@ import {
     FilterIcon,
     NetworkIcon,
     PinIcon,
+    SignpostIcon,
     SuperscriptIcon,
 } from 'lucide-react'
 
@@ -42,6 +43,11 @@ const items = [
         title: 'Count-Min Sketch',
         url: '/count-min-sketch',
         icon: AudioWaveformIcon,
+    },
+    {
+        title: 'Deployment Strategies',
+        url: '/deployment',
+        icon: SignpostIcon,
     },
     {
         title: 'DNS Resolver',

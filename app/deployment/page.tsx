@@ -1,5 +1,6 @@
 'use client'
 
+import DeploymentLogs from '@/app/deployment/deployment-logs'
 import {
     Config,
     Instance,
@@ -8,43 +9,29 @@ import {
     Strategy,
     StrategyInfo,
 } from '@/app/deployment/deployment-types'
+import { Button } from '@/components/ui/button'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardTitle,
+} from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Activity,
     CheckCircle,
+    NetworkIcon,
     Pause,
     Play,
     Server,
+    ServerIcon,
     Settings,
-    Terminal,
-    Trash2,
     Users,
     XCircle,
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
-
-// Switch component
-const Switch: React.FC<{
-    checked: boolean
-    onChange: (checked: boolean) => void
-    disabled?: boolean
-}> = ({ checked, onChange, disabled = false }) => {
-    return (
-        <button
-            type="button"
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                checked ? 'bg-blue-600' : 'bg-gray-200'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-            onClick={() => !disabled && onChange(!checked)}
-            disabled={disabled}
-        >
-            <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    checked ? 'translate-x-6' : 'translate-x-1'
-                }`}
-            />
-        </button>
-    )
-}
 
 const DeploymentStrategiesApp: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Strategy>('rolling')
@@ -70,7 +57,7 @@ const DeploymentStrategiesApp: React.FC = () => {
         manualTrafficSplit: undefined,
     })
     const intervalRef = useRef<NodeJS.Timeout | null>(null)
-    const logsEndRef = useRef<HTMLDivElement | null>(null)
+
     const promoteCheckRef = useRef<boolean>(false)
 
     const strategies: StrategyInfo[] = [
@@ -109,10 +96,6 @@ const DeploymentStrategiesApp: React.FC = () => {
         targetVersion,
         config.autoPromote,
     ])
-
-    useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [logs])
 
     const addLog = (message: string, type: Log['type'] = 'info'): void => {
         const timestamp = new Date().toLocaleTimeString()
@@ -565,485 +548,440 @@ const DeploymentStrategiesApp: React.FC = () => {
     }
 
     return (
-        <div className="w-full max-w-6xl mx-auto p-6 space-y-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-                <h1 className="text-3xl font-bold text-gray-800 mb-4">
-                    Deployment Strategies Simulator
-                </h1>
+        <div className="bg-primary container mx-auto p-4 space-y-4">
+            <h1 className="text-3xl font-bold text-center my-2 p-8">
+                Deployment Strategies Simulator
+            </h1>
 
-                {/* Current Version Display */}
-                <div className="mb-4 flex items-center gap-4">
-                    <span className="text-lg font-medium">
-                        Current Production Version:
+            {/* Current Version Display */}
+            <div className="mb-4 flex items-center gap-4">
+                <span className="text-lg font-medium">
+                    Current Production Version:
+                </span>
+                <span className="text-xl font-bold text-blue-600">
+                    v{currentVersion}.0
+                </span>
+                {isDeploying && (
+                    <>
+                        <span className="text-gray-500">→</span>
+                        <span className="text-xl font-bold text-green-600">
+                            v{targetVersion}.0
+                        </span>
+                    </>
+                )}
+            </div>
+
+            {/* Strategy Tabs */}
+            <div className="flex flex-wrap gap-2 mb-6">
+                {strategies.map((strategy) => (
+                    <Button
+                        key={strategy.id}
+                        onClick={() => {
+                            setActiveTab(strategy.id)
+                            setLogs([])
+                        }}
+                        disabled={isDeploying}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                            activeTab === strategy.id
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        } ${isDeploying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <span className="mr-2">{strategy.icon}</span>
+                        {strategy.name}
+                    </Button>
+                ))}
+            </div>
+
+            {/* Strategy Description */}
+            <Card className="bg-primary my-4 p-8">
+                <CardTitle>
+                    <span className="text-2xl font-semibold">
+                        {strategies.find((s) => s.id === activeTab)?.name}
                     </span>
-                    <span className="text-xl font-bold text-blue-600">
-                        v{currentVersion}.0
-                    </span>
-                    {isDeploying && (
-                        <>
-                            <span className="text-gray-500">→</span>
-                            <span className="text-xl font-bold text-green-600">
-                                v{targetVersion}.0
-                            </span>
-                        </>
-                    )}
-                </div>
+                </CardTitle>
+                <CardDescription>{getStrategyDescription()}</CardDescription>
+            </Card>
 
-                {/* Strategy Tabs */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {strategies.map((strategy) => (
-                        <button
-                            key={strategy.id}
-                            onClick={() => setActiveTab(strategy.id)}
-                            disabled={isDeploying}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                activeTab === strategy.id
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            } ${isDeploying ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <span className="mr-2">{strategy.icon}</span>
-                            {strategy.name}
-                        </button>
-                    ))}
-                </div>
+            {/* Control Panel */}
+            <div className="flex flex-row justify-start items-baseline gap-4">
+                <Card className="bg-primary flex flex-col p-4 w-1/2 h-max">
+                    <CardTitle className="font-semibold mb-4 flex items-center gap-2">
+                        <Settings />
+                        Configuration
+                    </CardTitle>
 
-                {/* Strategy Description */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <p className="text-gray-700">{getStrategyDescription()}</p>
-                </div>
+                    <CardContent className="flex flex-col gap-y-6 justify-between">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="total-instances">
+                                Total Instances
+                            </Label>
+                            <Input
+                                id="total-instances"
+                                type="number"
+                                min="4"
+                                max="12"
+                                value={config.totalInstances}
+                                onChange={(e) =>
+                                    setConfig({
+                                        ...config,
+                                        totalInstances:
+                                            parseInt(e.target.value) || 6,
+                                    })
+                                }
+                                className="w-20 px-2 py-1 border rounded"
+                                disabled={isDeploying}
+                            />
+                        </div>
 
-                {/* Control Panel */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="space-y-4">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                            <Settings className="w-5 h-5" />
-                            Configuration
-                        </h3>
-
-                        <div className="space-y-3">
-                            <label className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Total Instances
-                                </span>
-                                <input
-                                    type="number"
-                                    min="4"
-                                    max="12"
-                                    value={config.totalInstances}
-                                    onChange={(e) =>
-                                        setConfig({
-                                            ...config,
-                                            totalInstances:
-                                                parseInt(e.target.value) || 6,
-                                        })
-                                    }
-                                    className="w-20 px-2 py-1 border rounded"
-                                    disabled={isDeploying}
-                                />
-                            </label>
-
-                            {activeTab === 'canary' && (
-                                <label className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">
-                                        Canary %
-                                    </span>
-                                    <input
-                                        type="number"
-                                        min="5"
-                                        max="50"
-                                        value={config.canaryPercentage}
-                                        onChange={(e) =>
-                                            setConfig({
-                                                ...config,
-                                                canaryPercentage:
-                                                    parseInt(e.target.value) ||
-                                                    20,
-                                            })
-                                        }
-                                        className="w-20 px-2 py-1 border rounded"
-                                        disabled={isDeploying}
-                                    />
-                                </label>
-                            )}
-
-                            {(activeTab === 'canary' || activeTab === 'ab') && (
-                                <label className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">
-                                        Manual Traffic Split %
-                                    </span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={config.manualTrafficSplit ?? ''}
-                                        onChange={(e) =>
-                                            setConfig({
-                                                ...config,
-                                                manualTrafficSplit: e.target
-                                                    .value
-                                                    ? parseInt(e.target.value)
-                                                    : undefined,
-                                            })
-                                        }
-                                        placeholder="Auto"
-                                        className="w-20 px-2 py-1 border rounded"
-                                        disabled={isDeploying}
-                                    />
-                                </label>
-                            )}
-
-                            <label className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Deploy Buggy Version
-                                </span>
-                                <Switch
-                                    checked={config.buggyVersion}
-                                    onChange={(checked) =>
-                                        setConfig({
-                                            ...config,
-                                            buggyVersion: checked,
-                                        })
-                                    }
-                                    disabled={isDeploying}
-                                />
-                            </label>
-
-                            <label className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Auto-Rollback
-                                </span>
-                                <Switch
-                                    checked={config.rollbackEnabled}
-                                    onChange={(checked) =>
-                                        setConfig({
-                                            ...config,
-                                            rollbackEnabled: checked,
-                                        })
-                                    }
-                                    disabled={isDeploying}
-                                />
-                            </label>
-
-                            <label className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Auto-Promote
-                                </span>
-                                <Switch
-                                    checked={config.autoPromote}
-                                    onChange={(checked) =>
-                                        setConfig({
-                                            ...config,
-                                            autoPromote: checked,
-                                        })
-                                    }
-                                    disabled={isDeploying}
-                                />
-                            </label>
-
-                            <label className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Error Threshold %
-                                </span>
-                                <input
+                        {activeTab === 'canary' && (
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="canary-percentage">
+                                    Canary
+                                </Label>
+                                <Input
+                                    id="canary-percentage"
                                     type="number"
                                     min="5"
                                     max="50"
-                                    value={config.errorThreshold}
+                                    value={config.canaryPercentage}
                                     onChange={(e) =>
                                         setConfig({
                                             ...config,
-                                            errorThreshold:
-                                                parseInt(e.target.value) || 10,
+                                            canaryPercentage:
+                                                parseInt(e.target.value) || 20,
                                         })
                                     }
                                     className="w-20 px-2 py-1 border rounded"
                                     disabled={isDeploying}
                                 />
-                            </label>
+                            </div>
+                        )}
+
+                        {(activeTab === 'canary' || activeTab === 'ab') && (
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="manual-traffic-split">
+                                    Manual Traffic Split Percentage
+                                </Label>
+                                <Input
+                                    id="manual-traffic-split"
+                                    type="number"
+                                    min="0"
+                                    max="15"
+                                    value={config.manualTrafficSplit ?? ''}
+                                    onChange={(e) =>
+                                        setConfig({
+                                            ...config,
+                                            manualTrafficSplit: e.target.value
+                                                ? parseInt(e.target.value)
+                                                : undefined,
+                                        })
+                                    }
+                                    placeholder="Auto"
+                                    className="w-20 px-2 py-1 border rounded"
+                                    disabled={isDeploying}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="buggy-version">
+                                Deploy Buggy Version
+                            </Label>
+                            <Checkbox
+                                id="buggy-version"
+                                checked={config.buggyVersion}
+                                onChange={(event) => {
+                                    setConfig({
+                                        ...config,
+                                        buggyVersion: (
+                                            event.target as HTMLInputElement
+                                        ).checked,
+                                    })
+                                }}
+                                disabled={isDeploying}
+                            />
                         </div>
-                    </div>
 
-                    <div className="space-y-4">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                            <Activity className="w-5 h-5" />
-                            Metrics
-                        </h3>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Error Rate
-                                </span>
-                                <span
-                                    className={`font-semibold ${metrics.errorRate > config.errorThreshold ? 'text-red-600' : 'text-green-600'}`}
-                                >
-                                    {metrics.errorRate.toFixed(1)}%
-                                </span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Response Time
-                                </span>
-                                <span className="font-semibold">
-                                    {metrics.responseTime}ms
-                                </span>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">
-                                    Progress
-                                </span>
-                                <span className="font-semibold">
-                                    {deploymentProgress}%
-                                </span>
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="auto-rollback">Auto-Rollback</Label>
+                            <Checkbox
+                                id="auto-rollback"
+                                checked={config.rollbackEnabled}
+                                onChange={(event) => {
+                                    setConfig({
+                                        ...config,
+                                        rollbackEnabled: (
+                                            event.target as HTMLInputElement
+                                        ).checked,
+                                    })
+                                }}
+                                disabled={isDeploying}
+                            />
                         </div>
 
-                        <div className="pt-4">
-                            <button
-                                onClick={() =>
-                                    isDeploying
-                                        ? setIsDeploying(false)
-                                        : startDeployment()
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="auto-promote">Auto-Promote</Label>
+                            <Checkbox
+                                id="auto-promote"
+                                checked={config.autoPromote}
+                                onChange={(event) =>
+                                    setConfig({
+                                        ...config,
+                                        autoPromote: (
+                                            event.target as HTMLInputElement
+                                        ).checked,
+                                    })
                                 }
-                                disabled={
-                                    isDeploying && deploymentProgress === 100
-                                }
-                                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                                disabled={isDeploying}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <Label
+                                htmlFor="error-threshold"
+                                className="flex items-center justify-between"
                             >
-                                {isDeploying ? (
-                                    <Pause className="w-5 h-5" />
-                                ) : (
-                                    <Play className="w-5 h-5" />
-                                )}
-                                {isDeploying
-                                    ? 'Pause Deployment'
-                                    : 'Start Deployment'}
-                            </button>
+                                Error Threshold
+                            </Label>
+                            <Input
+                                id="error-threshold"
+                                type="number"
+                                min="5"
+                                max="50"
+                                value={config.errorThreshold}
+                                onChange={(e) =>
+                                    setConfig({
+                                        ...config,
+                                        errorThreshold:
+                                            parseInt(e.target.value) || 10,
+                                    })
+                                }
+                                className="w-20 px-2 py-1 border rounded"
+                                disabled={isDeploying}
+                            />
                         </div>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-primary flex flex-col p-4 w-1/2 h-max">
+                    <CardTitle className="font-semibold mb-4 flex items-center gap-2">
+                        <Activity />
+                        Metrics
+                    </CardTitle>
 
-                {/* Progress Bar */}
-                <div className="mb-6">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                            className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                            style={{ width: `${deploymentProgress}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Instance Visualization */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                        <Server className="w-5 h-5" />
-                        Infrastructure View
-                    </h3>
-
-                    <div className="flex flex-col items-center">
-                        {/* User Traffic */}
-                        <div className="text-center mb-4">
-                            <div className="flex justify-center gap-2 mb-2">
-                                <Users className="w-6 h-6 text-gray-600" />
-                                <Users className="w-6 h-6 text-gray-600" />
-                                <Users className="w-6 h-6 text-gray-600" />
-                            </div>
-                            <span className="text-sm text-gray-600 font-medium">
-                                User Traffic
+                    <CardContent className="flex flex-col gap-y-6 justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm">Error Rate</span>
+                            <span
+                                className={`font-semibold ${metrics.errorRate > config.errorThreshold ? 'text-red-600' : 'text-green-600'}`}
+                            >
+                                {metrics.errorRate.toFixed(1)}%
                             </span>
                         </div>
 
-                        {/* Arrow down */}
-                        <div className="w-1 h-8 bg-gray-400 relative">
-                            <div className="absolute -bottom-2 -left-2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-gray-400"></div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm">Response Time</span>
+                            <span className="font-semibold">
+                                {metrics.responseTime}ms
+                            </span>
                         </div>
 
-                        {/* Load Balancer */}
-                        <div className="bg-blue-600 rounded-lg p-4 mb-8 shadow-lg relative">
-                            <div className="flex gap-3 items-center">
-                                <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                                <div className="w-3 h-3 bg-white rounded-full animate-pulse delay-75"></div>
-                                <div className="w-3 h-3 bg-white rounded-full animate-pulse delay-150"></div>
-                            </div>
-                            <div className="text-white text-sm font-medium mt-2">
-                                Load Balancer
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm">Progress</span>
+                            <span className="font-semibold">
+                                {deploymentProgress}%
+                            </span>
                         </div>
+                    </CardContent>
+                </Card>
+            </div>
+            <Button
+                onClick={() =>
+                    isDeploying ? setIsDeploying(false) : startDeployment()
+                }
+                disabled={isDeploying && deploymentProgress === 100}
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+            >
+                {isDeploying ? (
+                    <Pause className="w-5 h-5" />
+                ) : (
+                    <Play className="w-5 h-5" />
+                )}
+                {isDeploying ? 'Pause Deployment' : 'Start Deployment'}
+            </Button>
 
-                        {/* Traffic Distribution */}
-                        <div className="w-full flex justify-center gap-8 mb-4">
-                            {(() => {
-                                const versionGroups = instances.reduce<
-                                    Record<
-                                        string,
-                                        {
-                                            instances: Instance[]
-                                            totalTraffic: number
-                                        }
-                                    >
-                                >((acc, instance) => {
-                                    const version =
-                                        instance.version.split(' ')[0]
-                                    if (!acc[version]) {
-                                        acc[version] = {
-                                            instances: [],
-                                            totalTraffic: 0,
-                                        }
-                                    }
-                                    acc[version].instances.push(instance)
-                                    acc[version].totalTraffic +=
-                                        instance.traffic || 0
-                                    return acc
-                                }, {})
-
-                                return Object.entries(versionGroups).map(
-                                    ([version, data]) => (
-                                        <div
-                                            key={version}
-                                            className="flex flex-col items-center flex-1 max-w-xs"
-                                        >
-                                            {/* Traffic Arrow with Percentage */}
-                                            <div className="relative mb-4">
-                                                <div className="w-1 h-12 bg-gray-400 mx-auto">
-                                                    <div className="absolute -bottom-2 -left-2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-gray-400"></div>
-                                                </div>
-                                                <div className="absolute top-1/2 -translate-y-1/2 -right-12 bg-white px-2 py-1 rounded shadow-md">
-                                                    <span className="font-bold text-sm">
-                                                        {data.totalTraffic.toFixed(
-                                                            1
-                                                        )}
-                                                        %
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Server Group */}
-                                            <div className="w-full">
-                                                <div className="text-center mb-2">
-                                                    <span className="text-sm font-medium text-gray-700">
-                                                        {version}
-                                                    </span>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {data.instances.map(
-                                                        (instance) => (
-                                                            <div
-                                                                key={
-                                                                    instance.id
-                                                                }
-                                                                className="relative"
-                                                            >
-                                                                <div
-                                                                    className={`${getInstanceColor(instance)} rounded p-2 text-white text-center transition-all duration-300 ${
-                                                                        instance.status ===
-                                                                        'unhealthy'
-                                                                            ? 'animate-pulse'
-                                                                            : ''
-                                                                    } ${instance.status === 'terminating' ? 'opacity-50' : ''}`}
-                                                                >
-                                                                    <div className="flex flex-col items-center">
-                                                                        <div className="w-6 h-4 bg-white bg-opacity-20 rounded-sm mb-1"></div>
-                                                                        <div className="w-6 h-4 bg-white bg-opacity-20 rounded-sm mb-1"></div>
-                                                                        <div className="text-xs opacity-90">
-                                                                            {instance.id +
-                                                                                1}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Status Icon */}
-                                                                <div className="absolute -top-1 -right-1">
-                                                                    {instance.status ===
-                                                                        'healthy' && (
-                                                                        <CheckCircle className="w-4 h-4 text-green-500 bg-white rounded-full" />
-                                                                    )}
-                                                                    {instance.status ===
-                                                                        'unhealthy' && (
-                                                                        <XCircle className="w-4 h-4 text-red-500 bg-white rounded-full" />
-                                                                    )}
-                                                                    {instance.status ===
-                                                                        'shadow' && (
-                                                                        <Users className="w-4 h-4 text-purple-500 bg-white rounded-full" />
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                )
-                            })()}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Legend */}
-                <div className="mt-6 flex flex-wrap gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                        <span>v{currentVersion}.0 (Current)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-green-500 rounded"></div>
-                        <span>v{targetVersion}.0 (New)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-red-500 rounded"></div>
-                        <span>Unhealthy</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-purple-400 rounded"></div>
-                        <span>Shadow</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 bg-gray-400 rounded"></div>
-                        <span>Terminating</span>
-                    </div>
-                </div>
-
-                {/* Deployment Logs */}
-                <div className="mt-6 bg-gray-900 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-white flex items-center gap-2">
-                            <Terminal className="w-5 h-5" />
-                            Deployment Logs
-                        </h3>
-                        <button
-                            onClick={clearLogs}
-                            className="text-gray-400 hover:text-white transition-colors"
-                            title="Clear logs"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-
-                    <div className="bg-black rounded p-3 h-48 overflow-y-auto font-mono text-sm">
-                        {logs.length === 0 ? (
-                            <div className="text-gray-500">
-                                No logs yet. Start a deployment to see
-                                activity...
-                            </div>
-                        ) : (
-                            logs.map((log) => (
-                                <div key={log.id} className="mb-1">
-                                    <span className="text-gray-400">
-                                        [{log.timestamp}]
-                                    </span>
-                                    <span className={`ml-2 ${log.color}`}>
-                                        {log.icon} {log.message}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                        <div ref={logsEndRef} />
-                    </div>
+            {/* Progress Bar */}
+            <div className="my-6">
+                <div className="w-full bg-gray-500 rounded-full h-3">
+                    <div
+                        className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${deploymentProgress}%` }}
+                    />
                 </div>
             </div>
+
+            {/* Instance Visualization */}
+            <Card className="bg-primary p-4">
+                <CardTitle className="font-semibold flex items-center gap-2">
+                    <Server />
+                    Infrastructure View
+                </CardTitle>
+
+                <CardContent className="flex flex-col items-center">
+                    {/* User Traffic */}
+                    <div className="text-center mb-4">
+                        <div className="flex justify-center gap-2 mb-2">
+                            <Users className="w-6 h-6 " />
+                            <Users className="w-6 h-6 " />
+                            <Users className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-medium">
+                            User Traffic
+                        </span>
+                    </div>
+
+                    {/* Arrow down */}
+                    <div className="w-1 h-8 bg-white relative">
+                        <div className="absolute -bottom-2 -left-2 w-2 h-2 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-white"></div>
+                    </div>
+
+                    {/* Load Balancer */}
+                    <Card className="flex flex-col justify-center items-center rounded-lg p-4 mb-8 shadow-lg bg-blue-500">
+                        <NetworkIcon />
+                        Load Balancer
+                    </Card>
+
+                    {/* Traffic Distribution */}
+                    <div className="w-full flex justify-center gap-8 mb-4">
+                        {(() => {
+                            const versionGroups = instances.reduce<
+                                Record<
+                                    string,
+                                    {
+                                        instances: Instance[]
+                                        totalTraffic: number
+                                    }
+                                >
+                            >((acc, instance) => {
+                                const version = instance.version.split(' ')[0]
+                                if (!acc[version]) {
+                                    acc[version] = {
+                                        instances: [],
+                                        totalTraffic: 0,
+                                    }
+                                }
+                                acc[version].instances.push(instance)
+                                acc[version].totalTraffic +=
+                                    instance.traffic || 0
+                                return acc
+                            }, {})
+
+                            return Object.entries(versionGroups).map(
+                                ([version, data]) => (
+                                    <div
+                                        key={version}
+                                        className="flex flex-col items-center flex-1 max-w-xs"
+                                    >
+                                        {/* Traffic Arrow with Percentage */}
+                                        <div className="relative mb-4">
+                                            <div className="w-1 h-12 bg-white mx-auto">
+                                                <div className="absolute -bottom-2 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-8 border-t-white"></div>
+                                            </div>
+                                            <div className="absolute top-1/2 -translate-y-1/2 -right-15 px-2 py-1 rounded shadow-md">
+                                                <span className="font-bold text-sm">
+                                                    {data.totalTraffic.toFixed(
+                                                        1
+                                                    )}
+                                                    %
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Server Group */}
+                                        <div className="w-full">
+                                            <div className="text-center mb-2">
+                                                <span className="text-sm font-medium">
+                                                    {version}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {data.instances.map(
+                                                    (instance) => (
+                                                        <div
+                                                            key={instance.id}
+                                                            className="relative"
+                                                        >
+                                                            <div
+                                                                className={`${getInstanceColor(instance)} rounded-lg p-2 text-white text-center transition-all duration-300 ${
+                                                                    instance.status ===
+                                                                    'unhealthy'
+                                                                        ? 'animate-pulse'
+                                                                        : ''
+                                                                } ${instance.status === 'terminating' ? 'opacity-50' : ''}`}
+                                                            >
+                                                                <div className="flex flex-col items-center gap-y-2">
+                                                                    <ServerIcon />
+                                                                    <div className="text-xs opacity-90">
+                                                                        {instance.id +
+                                                                            1}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Status Icon */}
+                                                            <div className="absolute -top-1 -right-1">
+                                                                {instance.status ===
+                                                                    'healthy' && (
+                                                                    <CheckCircle className="w-4 h-4 text-green-500 bg-white rounded-full" />
+                                                                )}
+                                                                {instance.status ===
+                                                                    'unhealthy' && (
+                                                                    <XCircle className="w-4 h-4 text-red-500 bg-white rounded-full" />
+                                                                )}
+                                                                {instance.status ===
+                                                                    'shadow' && (
+                                                                    <Users className="w-4 h-4 text-purple-500 bg-white rounded-full" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            )
+                        })()}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="mt-6 flex flex-wrap gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                            <span>v{currentVersion}.0 (Current)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-green-500 rounded"></div>
+                            <span>v{targetVersion}.0 (New)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-500 rounded"></div>
+                            <span>Unhealthy</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-purple-400 rounded"></div>
+                            <span>Shadow</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-gray-400 rounded"></div>
+                            <span>Terminating</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Deployment Logs */}
+            <DeploymentLogs logs={logs} clearLogs={clearLogs} />
         </div>
     )
 }

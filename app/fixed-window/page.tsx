@@ -121,29 +121,25 @@ const FixedWindowRateLimiter = () => {
                 {/* Configuration */}
                 <Card className="bg-primary my-4 p-8">
                     <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <Label className="block text-sm font-medium mb-2">
-                                Window Limit (requests)
-                            </Label>
-                            <Input
-                                type="number"
-                                value={windowLimit}
-                                onChange={(e) =>
-                                    setWindowLimit(
-                                        Math.max(
-                                            1,
-                                            parseInt(e.target.value) || 1
-                                        )
-                                    )
-                                }
-                                className="w-full px-3 py-2 border rounded-lg"
-                                min="1"
-                                max="20"
-                            />
-                            <span className="text-sm text-gray-400">
-                                {windowLimit} requests per window
-                            </span>
-                        </div>
+                        <Label className="block text-sm font-medium mb-2">
+                            Window Limit (requests)
+                        </Label>
+                        <Input
+                            type="number"
+                            value={windowLimit}
+                            onChange={(e) =>
+                                setWindowLimit(
+                                    Math.max(1, parseInt(e.target.value) || 1)
+                                )
+                            }
+                            className="w-full px-3 py-2 border rounded-lg"
+                            min="1"
+                            max="20"
+                        />
+                        <span className="text-sm text-gray-400">
+                            {windowLimit} requests per window
+                        </span>
+
                         <div>
                             <Label className="block text-sm font-medium mb-2">
                                 Window Duration (ms)
