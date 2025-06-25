@@ -195,10 +195,10 @@ const CountMinSketchWorking: React.FC = () => {
     return (
         <div className="container mx-auto p-2 sm:p-4 space-y-4 max-w-7xl">
             <div className="transform duration-500">
-                <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-white">
+                <h1 className="text-2xl sm:text-4xl font-bold mb-2">
                     Count-Min Sketch Visualizer
                 </h1>
-                <p className="text-sm sm:text-base text-blue-100 mb-4 sm:mb-6">
+                <p className="text-sm sm:text-base mb-4 sm:mb-6">
                     Generate random numbers to see how CMS estimates frequencies
                 </p>
             </div>

@@ -201,7 +201,7 @@ const SlidingWindowRateLimiter = () => {
 
                         <Button
                             onClick={handleReset}
-                            className="w-full items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
+                            className="w-full items-center gap-2 px-4 py-2 bg-rose-500 rounded-lg hover:bg-rose-600 transition-colors"
                         >
                             <RotateCcw size={20} />
                             Reset
@@ -211,7 +211,7 @@ const SlidingWindowRateLimiter = () => {
 
                 {/* Timeline Visualization */}
                 <Card className="bg-primary p-4">
-                    <h3 className="text-lg text-white font-semibold mb-4">
+                    <h3 className="text-lg font-semibold mb-4">
                         Request Timeline
                     </h3>
 
@@ -362,7 +362,7 @@ const SlidingWindowRateLimiter = () => {
                                 return (
                                     <div
                                         key={i}
-                                        className="absolute text-md font-medium text-white"
+                                        className="absolute text-md font-medium"
                                         style={{
                                             left: `${(time - timeOffset) * pixelsPerMs}px`,
                                         }}

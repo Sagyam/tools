@@ -247,16 +247,16 @@ const CountMinSketchDemo: React.FC = () => {
     return (
         <div className="container mx-auto p-4 space-y-4">
             <div className="max-w-6xl mx-auto transform duration-500">
-                <h1 className="text-4xl font-bold mb-2 text-white">
+                <h1 className="text-4xl font-bold mb-2">
                     Count-Min Sketch Demo
                 </h1>
-                <p className="text-blue-100 mb-6">
+                <p className="mb-6">
                     Watch how the Count-Min Sketch probabilistic data structure
                     estimates frequencies compared to exact counting
                 </p>
 
                 {/* Controls */}
-                <Card className="bg-primary text-white rounded-lg shadow-lg p-4 mb-6">
+                <Card className="bg-primary rounded-lg shadow-lg p-4 mb-6">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4">
                             <Button
@@ -297,9 +297,7 @@ const CountMinSketchDemo: React.FC = () => {
                                     Speed: {getSpeedLabel(speed)}
                                 </label>
                                 <div className="flex items-center space-x-4">
-                                    <span className="text-xs text-gray-300">
-                                        Fast
-                                    </span>
+                                    <span className="text-xs">Fast</span>
                                     <input
                                         type="range"
                                         min="25"
@@ -311,9 +309,7 @@ const CountMinSketchDemo: React.FC = () => {
                                         }
                                         className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
                                     />
-                                    <span className="text-xs text-gray-300">
-                                        Slow
-                                    </span>
+                                    <span className="text-xs">Slow</span>
                                 </div>
                             </div>
                             <div className="text-sm max-w-xs">
@@ -331,7 +327,7 @@ const CountMinSketchDemo: React.FC = () => {
 
                 <div className="grid grid-cols-1 gap-6">
                     {/* Current Items Display */}
-                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6">
+                    <Card className="bg-primary rounded-lg shadow-lg p-6">
                         <h2 className="text-xl font-semibold mb-4">
                             Stream of Recent Items
                         </h2>
@@ -377,7 +373,7 @@ const CountMinSketchDemo: React.FC = () => {
                     </Card>
 
                     {/* Count-Min Sketch Table - Flipped */}
-                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6">
+                    <Card className="bg-primary rounded-lg shadow-lg p-6">
                         <h2 className="text-xl font-semibold mb-4">
                             Count-Min Sketch Table
                         </h2>
@@ -401,12 +397,12 @@ const CountMinSketchDemo: React.FC = () => {
                                         )}
                                     </tr>
                                 </thead>
-                                <tbody className="bg-primary text-white">
+                                <tbody className="bg-primary">
                                     {Array.from(
                                         { length: cms.width },
                                         (_, colIdx) => (
                                             <tr key={colIdx}>
-                                                <td className="bg-primary text-white border p-2 text-sm font-medium">
+                                                <td className="bg-primary border p-2 text-sm font-medium">
                                                     {colIdx}
                                                 </td>
                                                 {Array.from(
@@ -454,7 +450,7 @@ const CountMinSketchDemo: React.FC = () => {
                     </Card>
 
                     {/* Frequency Comparison */}
-                    <Card className="bg-primary text-white rounded-lg shadow-lg p-6 h-96">
+                    <Card className="bg-primary rounded-lg shadow-lg p-6 h-96">
                         <h2 className="text-xl font-semibold mb-4">
                             Frequency Comparison
                             <span className="text-md ml-2">
