@@ -136,7 +136,7 @@ const FixedWindowRateLimiter = () => {
                             min="1"
                             max="20"
                         />
-                        <span className="text-sm text-gray-400">
+                        <span className="text-sm">
                             {windowLimit} requests per window
                         </span>
 
@@ -160,7 +160,7 @@ const FixedWindowRateLimiter = () => {
                                 max="5000"
                                 step="100"
                             />
-                            <span className="text-sm text-gray-400">
+                            <span className="text-sm">
                                 {windowDuration} ms per window
                             </span>
                         </div>
