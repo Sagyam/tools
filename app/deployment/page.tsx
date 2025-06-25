@@ -448,8 +448,8 @@ const DeploymentStrategiesApp: React.FC = () => {
                         version: `v${targetVersion}.0`,
                         status:
                             config.buggyVersion && Math.random() < 0.3
-                                ? 'unhealthy'
-                                : 'healthy',
+                                ? ('unhealthy' as const)
+                                : ('healthy' as const),
                         traffic: 100 / config.totalInstances,
                     }
                 }
