@@ -1,9 +1,8 @@
 import { AppSidebar } from '@/components/app-sidebar'
+import { PostHogProvider } from '@/components/PostHogProvider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import './globals.css'
 import { Raleway } from 'next/font/google'
@@ -27,21 +26,22 @@ export default async function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning className={font.className}>
             <body>
-                <SidebarProvider defaultOpen={false}>
-                    <AppSidebar />
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="system"
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        <SidebarTrigger />
-                        {children}
-                        <Analytics />
-                        <SpeedInsights />
-                        <Toaster />
-                    </ThemeProvider>
-                </SidebarProvider>
+                <PostHogProvider>
+                    <SidebarProvider defaultOpen={false}>
+                        <AppSidebar />
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <SidebarTrigger />
+                            {children}
+
+                            <Toaster />
+                        </ThemeProvider>
+                    </SidebarProvider>
+                </PostHogProvider>
             </body>
         </html>
     )
