@@ -11,21 +11,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             person_profiles: 'always',
             defaults: '2025-05-24',
         })
-
-        posthog.register({
-            $browser: navigator.userAgent,
-            $device_id: posthog.get_distinct_id(),
-            $country_code: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            $timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        })
-
-        //capture page views
-        posthog.capture('$pageview', {
-            $current_url: window.location.href,
-            $pathname: window.location.pathname,
-            $search: window.location.search,
-            $title: document.title,
-        })
     }, [])
 
     return <PHProvider client={posthog}>{children}</PHProvider>
