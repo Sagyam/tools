@@ -259,7 +259,7 @@ const DeploymentStrategiesApp: React.FC = () => {
         const currentBatch = Math.floor((progress / 100) * config.batchSize)
 
         setInstances((prevInstances) => {
-            const updated = prevInstances.map((instance, idx) => {
+            return prevInstances.map((instance, idx) => {
                 const batchIndex = Math.floor(idx / instancesPerBatch)
                 if (
                     batchIndex <= currentBatch &&
@@ -280,7 +280,6 @@ const DeploymentStrategiesApp: React.FC = () => {
                 }
                 return instance
             })
-            return updated
         })
     }
 

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sidebar'
 import {
     ArrowBigRightDashIcon,
+    AudioLinesIcon,
     AudioWaveformIcon,
     CalculatorIcon,
     CoinsIcon,
@@ -38,6 +39,11 @@ const items = [
         title: 'Caching Strategies',
         url: '/caching',
         icon: DatabaseZapIcon,
+    },
+    {
+        title: 'Count-Min Sketch Working',
+        url: '/cms-working',
+        icon: AudioLinesIcon,
     },
     {
         title: 'Count-Min Sketch',
