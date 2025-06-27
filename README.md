@@ -23,7 +23,7 @@ A comprehensive collection of interactive educational tools for learning compute
 - **[Caching Strategies](https://tools.sagyamthapa.com.np/caching)** - Six different caching patterns with operation visualization
 
 ### Network Tools
-- **[DNS Resolver](/dns)** - DNS resolution process with packet flow animation
+- **[DNS Resolver](https://tools.sagyamthapa.com.np/dns)** - DNS resolution process with packet flow animation
 
 ## 🚀 Getting Started
 
