@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Interactive Computer Science Tools Collection
 
-## Getting Started
+A comprehensive collection of interactive educational tools for learning computer science algorithms, data structures, and system design concepts. Built with Next.js and designed for hands-on learning through visual demonstrations.
 
-First, run the development server:
+## 🛠️ Available Tools
+
+### Data Structures & Algorithms
+- **[Bloom Filter](https://tools.sagyamthapa.com.np/bloom-calculator)** - Interactive probabilistic data structure with bit array visualization
+- **[Bloom Calculator](https://tools.sagyamthapa.com.np/bloom-calculator)** - Mathematical calculator for optimal Bloom filter parameters
+- **[HyperLogLog](https://tools.sagyamthapa.com.np/hyperloglog)** - Cardinality estimation demonstration with bucket visualization
+- **[Count-Min Sketch](https://tools.sagyamthapa.com.np/count-min-sketch)** - Frequency estimation for streaming data
+- **[Count-Min Sketch Working](https://tools.sagyamthapa.com.np/cms-working)** - Additional CMS implementation variant
+
+### Rate Limiting & Traffic Control
+- **[Token Bucket](https://tools.sagyamthapa.com.np/token-bucket)** - Visual rate limiter with animated token consumption
+- **[Leaky Bucket](https://tools.sagyamthapa.com.np/leaky-bucket)** - Alternative rate limiting algorithm demonstration
+- **[Fixed Window](https://tools.sagyamthapa.com.np/fixed-window)** - Fixed window rate limiting visualization
+- **[Sliding Window](https://tools.sagyamthapa.com.np/sliding-window)** - Sliding window rate limiting algorithm
+
+### System Design & Infrastructure
+- **[Load Balancer](https://tools.sagyamthapa.com.np/load-balancer)** - Multi-algorithm load balancing simulator with real-time metrics
+- **[Deployment Strategies](https://tools.sagyamthapa.com.np/deployment)** - Interactive deployment patterns (Rolling, Blue/Green, Canary, A/B, etc.)
+- **[Caching Strategies](https://tools.sagyamthapa.com.np/caching)** - Six different caching patterns with operation visualization
+
+### Network Tools
+- **[DNS Resolver](/dns)** - DNS resolution process with packet flow animation
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 22+ 
+- npm, yarn, or pnpm
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone the repository
+git clone https://github.com/Sagyam/tools.git
+cd tools
+
+# Install dependencies
+pnpm install
+
+# Start the development server
+pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the tools collection.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🎯 Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Interactive Visualizations** - Real-time animations and visual feedback
+- **Educational Focus** - Step-by-step explanations of complex algorithms
+- **Responsive Design** - Mobile-friendly interfaces
+- **Dark/Light Theme** - Theme switching support
+- **Configurable Parameters** - Adjust settings to explore different scenarios
+- **Real-time Metrics** - Live performance and accuracy measurements
 
-## Learn More
+## 🛠️ Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Analytics**: PostHog
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🤝 Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Contributions are welcome! Please feel free to submit pull requests or open issues for:
+- New tool suggestions
+- Bug fixes
+- UI/UX improvements
+- Educational content enhancements
 
-## Deploy on Vercel
+## 📄 License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is open source and available under the [MIT License](LICENSE).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+Made with ❤️ for computer science education

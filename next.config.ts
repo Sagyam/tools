@@ -18,8 +18,8 @@ const nextConfig: NextConfig = {
             },
         ]
     },
-    // Required to support PostHog trailing slash API requests
     skipTrailingSlashRedirect: true,
+    allowedDevOrigins: ['http://localhost:3000', 'http://192.168.1.83:3000'],
 }
 
 export default nextConfig
