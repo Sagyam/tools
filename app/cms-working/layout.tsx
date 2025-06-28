@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         siteName: 'Tools',
         images: [
             {
-                url: 'https://sagyamthapa.com.np/cms-working.png',
+                url: 'https://tools.sagyamthapa.com.np/cms-working.png',
                 width: 1200,
                 height: 630,
                 alt: 'Count Min Sketch Open Graph Image',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         title: 'Count Min Sketch',
         description:
             'Count Min Sketch is a probabilistic data structure used for estimating the frequency of events in a stream of data. It is particularly useful for applications that require approximate counting of large datasets with limited memory.',
-        images: ['https://sagyamthapa.com.np/cms-working.png'],
+        images: ['https://tools.sagyamthapa.com.np/cms-working.png'],
     },
     keywords: [
         'count min sketch',

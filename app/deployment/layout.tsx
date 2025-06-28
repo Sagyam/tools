@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         siteName: 'Tools',
         images: [
             {
-                url: './deployment.png',
+                url: 'https://tools.sagyamthapa.com.np/deployment.png',
                 width: 1200,
                 height: 630,
                 alt: 'Deployment Strategies Open Graph Image',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         title: 'Deployment Strategies',
         description:
             'Interactive deployment patterns (Rolling, Blue/Green, Canary, A/B, etc.)',
-        images: ['https://sagyamthapa.com.np/deployment.png'],
+        images: ['https://tools.sagyamthapa.com.np/deployment.png'],
     },
     keywords: [
         'deployment strategies',

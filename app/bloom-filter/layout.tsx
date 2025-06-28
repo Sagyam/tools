@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         siteName: 'Tools',
         images: [
             {
-                url: './bloom-filter.png',
+                url: 'https://tools.sagyamthapa.com.np/bloom-filter.png',
                 width: 1200,
                 height: 630,
                 alt: 'Bloom Filter Open Graph Image',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         title: 'Bloom Filter',
         description:
             'Explore the Bloom filter algorithm, a space-efficient probabilistic data structure for set membership testing.',
-        images: ['https://sagyamthapa.com.np/bloom-filter.png'],
+        images: ['https://tools.sagyamthapa.com.np/bloom-filter.png'],
     },
 }
 

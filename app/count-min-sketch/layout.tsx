@@ -9,10 +9,10 @@ export const metadata: Metadata = {
         title: 'Count-Min Sketch',
         description:
             'Count-Min Sketch is a probabilistic data structure used for estimating the frequency of events in a stream of data.',
-        url: '/count-min-sketch',
+        url: 'https://tools.sagyamthapa.com.np/count-min-sketch',
         images: [
             {
-                url: '/cms.png',
+                url: 'https://tools.sagyamthapa.com.np/cms.png',
                 width: 1200,
                 height: 630,
             },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
         title: 'Count-Min Sketch',
         description:
             'Count-Min Sketch is a probabilistic data structure used for estimating the frequency of events in a stream of data.',
-        images: ['/cms.png'],
+        images: ['https://tools.sagyamthapa.com.np/cms.png'],
     },
     keywords: [
         'Count-Min Sketch',

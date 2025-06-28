@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         siteName: 'Tools',
         images: [
             {
-                url: './caching.png',
+                url: 'https://tools.sagyamthapa.com.np/caching.png',
                 width: 1200,
                 height: 630,
                 alt: 'Caching Open Graph Image',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
         title: 'Caching',
         description:
             'Learn about caching strategies, techniques, and best practices to improve application performance and reduce latency.',
-        images: ['https://sagyamthapa.com.np/caching.png'],
+        images: ['https://tools.sagyamthapa.com.np/caching.png'],
     },
     keywords: [
         'token bucket',

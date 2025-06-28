@@ -31,7 +31,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: 'Tools',
         description: 'Tools for your application',
-        images: ['https://sagyamthapa.com.np/og-image.png'],
+        images: ['https://tools.sagyamthapa.com.np/og-image.png'],
     },
     icons: {
         icon: '/favicon.ico',

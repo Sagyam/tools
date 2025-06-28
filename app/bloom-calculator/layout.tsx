@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         siteName: 'Tools',
         images: [
             {
-                url: './bloom-calculator.png',
+                url: 'https://tools.sagyamthapa.com.np/bloom-calculator.png',
                 width: 1200,
                 height: 630,
                 alt: 'Bloom Calculator Open Graph Image',
