@@ -10,9 +10,11 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   MarkerType,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useEtcdStore } from '../../store/etcdStore';
+import { RaftMessage } from '../../types';
 import { ClusterNode } from './ClusterNode';
 import { MessageVisualization } from './MessageVisualization';
 import { Button } from '@/components/ui/button';
@@ -23,53 +25,8 @@ const nodeTypes = {
   clusterNode: ClusterNode,
 };
 
-const LEARNING_CONCEPTS = [
-  {
-    title: 'Log Entries',
-    description: 'All proposed operations, including uncommitted ones. Can be ahead of commits during replication.',
-  },
-  {
-    title: 'Commit Index',
-    description: 'Operations replicated to majority and safe to apply. All nodes eventually reach same commit index.',
-  },
-  {
-    title: 'Replicating State',
-    description: 'Followers turn purple when receiving log entries. They commit once majority confirms the entry.',
-  },
-];
-
-const LEARNING_STEPS = [
-  {
-    action: 'Observe the initial cluster',
-    learn: 'One node is the leader (blue), others are followers (gray)',
-  },
-  {
-    action: 'Click "Add Key (Replicate)" and watch counters',
-    learn: 'Log count increases first, then Commit follows after majority - this is the 2-phase commit',
-  },
-  {
-    action: 'Partition a follower, then add keys',
-    learn: 'Partitioned node keeps its old logs - when restored, it receives missed entries via catch-up',
-  },
-  {
-    action: 'Click "Trigger Election" on any node',
-    learn: 'Watch the Raft election: candidate requests votes, collects majority, becomes leader',
-  },
-  {
-    action: 'Partition the leader node',
-    learn: 'Cluster automatically elects new leader from healthy nodes after 2s timeout',
-  },
-  {
-    action: 'Restore the partitioned node',
-    learn: 'Watch it catch up - Leader sends all missed log entries (catch-up messages), then syncs commit index',
-  },
-  {
-    action: 'Watch message labels',
-    learn: 'Vote? = vote request, Yes/No = vote response, Log = log entry, HB = heartbeat, OK = success response',
-  },
-];
-
-export const ClusterVisualization: React.FC = () => {
+// Inner component that has access to ReactFlow context
+const ClusterFlow: React.FC = () => {
   const {
     nodes: etcdNodes,
     currentTerm,
@@ -85,6 +42,7 @@ export const ClusterVisualization: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isReplicating, setIsReplicating] = React.useState(false);
+  const [currentZoom, setCurrentZoom] = React.useState(1.0);
 
   useEffect(() => {
     if (etcdNodes.size === 0) {
@@ -108,13 +66,42 @@ export const ClusterVisualization: React.FC = () => {
 
   useEffect(() => {
     const nodeArray = Array.from(etcdNodes.values());
-    const flowNodes: Node[] = nodeArray.map((node, index) => {
-      const angle = (index * 2 * Math.PI) / nodeArray.length;
-      const radius = 200;
-      const x = 400 + radius * Math.cos(angle);
-      const y = 300 + radius * Math.sin(angle);
+    const nodeCount = nodeArray.length;
 
-      return {
+    // Set appropriate zoom level
+    const zoom = ZOOM_LEVELS[nodeCount] || 1.0;
+    setCurrentZoom(zoom);
+
+    // Find leader and followers
+    const leader = nodeArray.find(n => n.status === 'leader');
+    const followers = nodeArray.filter(n => n.status !== 'leader');
+
+    const flowNodes: Node[] = [];
+    const centerX = 400;
+    const centerY = 300;
+    const radius = 220;
+
+    // Place leader in the center
+    if (leader) {
+      flowNodes.push({
+        id: leader.id,
+        type: 'clusterNode',
+        position: { x: centerX, y: centerY },
+        data: {
+          node: leader,
+          onFailover: handleFailover,
+          onTogglePartition: handleTogglePartition,
+        },
+      });
+    }
+
+    // Place followers in a circle around the leader
+    followers.forEach((node, index) => {
+      const angle = (index * 2 * Math.PI) / followers.length;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+
+      flowNodes.push({
         id: node.id,
         type: 'clusterNode',
         position: { x, y },
@@ -123,7 +110,7 @@ export const ClusterVisualization: React.FC = () => {
           onFailover: handleFailover,
           onTogglePartition: handleTogglePartition,
         },
-      };
+      });
     });
 
     setNodes(flowNodes);
@@ -171,7 +158,7 @@ export const ClusterVisualization: React.FC = () => {
 
           // Optionally send visual heartbeat message (less frequently to avoid clutter)
           if (Math.random() < 0.1) {
-            const heartbeat: import('../../types').RaftMessage = {
+            const heartbeat: RaftMessage = {
               id: `heartbeat-${Date.now()}-${Math.random()}`,
               type: 'AppendEntries',
               from: leader.id,
@@ -202,6 +189,180 @@ export const ClusterVisualization: React.FC = () => {
   );
 
   return (
+    <>
+      <div className="w-full h-[600px] border border-primary-foreground rounded-lg relative">
+        <div className="absolute top-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
+          <div className="font-semibold">Interactive Controls:</div>
+          <div>Click "Trigger Election" on nodes to start election</div>
+          <div>Click WiFi icon to partition/restore network</div>
+          <div>Use "Add Key" to see log replication</div>
+          <div>Watch nodes turn purple during replication</div>
+        </div>
+
+        <div className="absolute top-4 right-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
+          <div className="font-semibold">Legend:</div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-sky-600 rounded"></div>
+            <span>Leader</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-600 rounded"></div>
+            <span>Replicating</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-amber-600 rounded"></div>
+            <span>Candidate</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-slate-600 rounded"></div>
+            <span>Follower</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-800 rounded"></div>
+            <span>Partitioned</span>
+          </div>
+        </div>
+
+        {messages.length > 0 && (
+          <div className="absolute bottom-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700">
+            Active messages: {messages.length}
+          </div>
+        )}
+
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          defaultViewport={{ x: 0, y: 0, zoom: currentZoom }}
+          minZoom={0.3}
+          maxZoom={2}
+          attributionPosition="bottom-left"
+        >
+          <Background />
+          <Controls />
+          <MiniMap
+            nodeColor={(node) => {
+              const nodeData = etcdNodes.get(node.id);
+              if (!nodeData) return '#64748b';
+              if (nodeData.isPartitioned) return '#991b1b';
+              switch (nodeData.status) {
+                case 'leader':
+                  return '#0ea5e9';
+                case 'replicating':
+                  return '#9333ea';
+                case 'follower':
+                  return '#64748b';
+                case 'candidate':
+                  return '#f59e0b';
+                default:
+                  return '#64748b';
+              }
+            }}
+          />
+        </ReactFlow>
+
+        {messages.map((message) => {
+          const sourceNode = nodes.find((n) => n.id === message.from);
+          const targetNode = nodes.find((n) => n.id === message.to);
+          if (!sourceNode || !targetNode) return null;
+
+          return (
+            <MessageVisualization
+              key={message.id}
+              message={message}
+              sourceNode={sourceNode}
+              targetNode={targetNode}
+            />
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+const LEARNING_CONCEPTS = [
+  {
+    title: 'Log Entries',
+    description: 'All proposed operations, including uncommitted ones. Can be ahead of commits during replication.',
+  },
+  {
+    title: 'Commit Index',
+    description: 'Operations replicated to majority and safe to apply. All nodes eventually reach same commit index.',
+  },
+  {
+    title: 'Replicating State',
+    description: 'Followers turn purple when receiving log entries. They commit once majority confirms the entry.',
+  },
+];
+
+// Zoom level mapping based on number of nodes
+const ZOOM_LEVELS: Record<number, number> = {
+  3: 1.2,
+  5: 1.0,
+  7: 0.85,
+  9: 0.75,
+  11: 0.65,
+  13: 0.6,
+  15: 0.55,
+};
+
+const LEARNING_STEPS = [
+  {
+    action: 'Observe the initial cluster',
+    learn: 'One node is the leader (blue), others are followers (gray)',
+  },
+  {
+    action: 'Click "Add Key (Replicate)" and watch counters',
+    learn: 'Log count increases first, then Commit follows after majority - this is the 2-phase commit',
+  },
+  {
+    action: 'Partition a follower, then add keys',
+    learn: 'Partitioned node keeps its old logs - when restored, it receives missed entries via catch-up',
+  },
+  {
+    action: 'Click "Trigger Election" on any node',
+    learn: 'Watch the Raft election: candidate requests votes, collects majority, becomes leader',
+  },
+  {
+    action: 'Partition the leader node',
+    learn: 'Cluster automatically elects new leader from healthy nodes after 2s timeout',
+  },
+  {
+    action: 'Restore the partitioned node',
+    learn: 'Watch it catch up - Leader sends all missed log entries (catch-up messages), then syncs commit index',
+  },
+  {
+    action: 'Watch message labels',
+    learn: 'Vote? = vote request, Yes/No = vote response, Log = log entry, HB = heartbeat, OK = success response',
+  },
+];
+
+export const ClusterVisualization: React.FC = () => {
+  const {
+    currentTerm,
+    logs,
+    initializeCluster,
+    putWithReplication,
+    nodes: etcdNodes,
+  } = useEtcdStore();
+
+  const [isReplicating, setIsReplicating] = React.useState(false);
+
+  const handleAddKey = useCallback(async () => {
+    setIsReplicating(true);
+    const timestamp = Date.now();
+    await putWithReplication(`/config/key-${timestamp}`, `value-${timestamp}`);
+    setIsReplicating(false);
+  }, [putWithReplication]);
+
+  const leaderNode = useMemo(
+    () => Array.from(etcdNodes.values()).find(n => n.status === 'leader'),
+    [etcdNodes]
+  );
+
+  return (
     <div className="space-y-4">
       <LearningGuide steps={LEARNING_STEPS} concepts={LEARNING_CONCEPTS} />
 
@@ -209,20 +370,22 @@ export const ClusterVisualization: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-secondary">Cluster Size:</span>
-            <Button onClick={() => initializeCluster(3)} variant="outline" size="sm">
-              3 Nodes
-            </Button>
-            <Button onClick={() => initializeCluster(5)} variant="outline" size="sm">
-              5 Nodes
-            </Button>
-            <Button onClick={() => initializeCluster(7)} variant="outline" size="sm">
-              7 Nodes
-            </Button>
+            {[3, 5, 7, 9, 11, 13, 15].map((count) => (
+              <Button
+                key={count}
+                onClick={() => initializeCluster(count)}
+                variant="outline"
+                size="sm"
+              >
+                {count}
+              </Button>
+            ))}
             <HelpTooltip>
               <div className="space-y-1">
                 <div className="font-semibold">Cluster Size</div>
                 <div>Raft requires odd numbers for quorum</div>
-                <div>Larger = more fault tolerant, slower consensus</div>
+                <div>Larger = more fault tolerant</div>
+                <div>Replication speed auto-adjusts with size</div>
               </div>
             </HelpTooltip>
           </div>
@@ -292,92 +455,9 @@ export const ClusterVisualization: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full h-[600px] border border-primary-foreground rounded-lg relative">
-        <div className="absolute top-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
-          <div className="font-semibold">Interactive Controls:</div>
-          <div>Click "Trigger Election" on nodes to start election</div>
-          <div>Click WiFi icon to partition/restore network</div>
-          <div>Use "Add Key" to see log replication</div>
-          <div>Watch nodes turn purple during replication</div>
-        </div>
-
-        <div className="absolute top-4 right-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
-          <div className="font-semibold">Legend:</div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-sky-600 rounded"></div>
-            <span>Leader</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-purple-600 rounded"></div>
-            <span>Replicating</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-amber-600 rounded"></div>
-            <span>Candidate</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-slate-600 rounded"></div>
-            <span>Follower</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-800 rounded"></div>
-            <span>Partitioned</span>
-          </div>
-        </div>
-
-        {messages.length > 0 && (
-          <div className="absolute bottom-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700">
-            Active messages: {messages.length}
-          </div>
-        )}
-
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-        >
-          <Background />
-          <Controls />
-          <MiniMap
-            nodeColor={(node) => {
-              const nodeData = etcdNodes.get(node.id);
-              if (!nodeData) return '#64748b';
-              if (nodeData.isPartitioned) return '#991b1b';
-              switch (nodeData.status) {
-                case 'leader':
-                  return '#0ea5e9';
-                case 'replicating':
-                  return '#9333ea';
-                case 'follower':
-                  return '#64748b';
-                case 'candidate':
-                  return '#f59e0b';
-                default:
-                  return '#64748b';
-              }
-            }}
-          />
-        </ReactFlow>
-
-        {messages.map((message) => {
-          const sourceNode = nodes.find((n) => n.id === message.from);
-          const targetNode = nodes.find((n) => n.id === message.to);
-          if (!sourceNode || !targetNode) return null;
-
-          return (
-            <MessageVisualization
-              key={message.id}
-              message={message}
-              sourcePos={sourceNode.position}
-              targetPos={targetNode.position}
-            />
-          );
-        })}
-      </div>
+      <ReactFlowProvider>
+        <ClusterFlow />
+      </ReactFlowProvider>
     </div>
   );
 };

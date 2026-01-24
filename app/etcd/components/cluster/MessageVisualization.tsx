@@ -1,21 +1,26 @@
 import React from 'react';
+import { useViewport, Node } from 'reactflow';
 import { RaftMessage } from '../../types';
 
 interface MessageVisualizationProps {
   message: RaftMessage;
-  sourcePos: { x: number; y: number };
-  targetPos: { x: number; y: number };
+  sourceNode: Node;
+  targetNode: Node;
 }
 
 export const MessageVisualization: React.FC<MessageVisualizationProps> = ({
   message,
-  sourcePos,
-  targetPos,
+  sourceNode,
+  targetNode,
 }) => {
-  // Position message above the target node
-  // Add 100 to x and y to account for node width/height (nodes are centered)
-  const messageX = targetPos.x + 100;
-  const messageY = targetPos.y - 20; // Position above the node
+  const viewport = useViewport();
+
+  // Transform node position to screen coordinates
+  const targetPos = targetNode.position;
+
+  // Apply viewport transform (zoom and pan)
+  const screenX = targetPos.x * viewport.zoom + viewport.x + 100 * viewport.zoom;
+  const screenY = targetPos.y * viewport.zoom + viewport.y - 20 * viewport.zoom;
 
   const getMessageColor = () => {
     switch (message.type) {
@@ -55,8 +60,8 @@ export const MessageVisualization: React.FC<MessageVisualizationProps> = ({
     <div
       className={`absolute pointer-events-none animate-bounce`}
       style={{
-        left: messageX,
-        top: messageY,
+        left: screenX,
+        top: screenY,
         transform: 'translate(-50%, -100%)',
         zIndex: 1000,
       }}

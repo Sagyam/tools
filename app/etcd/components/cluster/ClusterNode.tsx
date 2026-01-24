@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { EtcdNode } from '../../types';
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, Activity } from 'lucide-react';
 
 interface ClusterNodeProps {
   data: {
@@ -51,6 +51,11 @@ export const ClusterNode: React.FC<ClusterNodeProps> = ({ data }) => {
       <div className="flex flex-col items-center gap-2 text-white">
         <div className="flex items-center gap-2">
           <span className="font-bold text-lg">{node.id}</span>
+          {isHealthy && !node.isPartitioned && (
+            <div title="Heartbeat active">
+              <Activity className="w-4 h-4 text-green-400 animate-pulse" />
+            </div>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

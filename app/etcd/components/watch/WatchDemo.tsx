@@ -30,7 +30,7 @@ const LEARNING_STEPS = [
 ];
 
 export const WatchDemo: React.FC = () => {
-  const { keyValues, put, delete: deleteKey, watch } = useEtcdStore();
+  const { keyValues, put, deleteKey, watch } = useEtcdStore();
   const [watchedKey, setWatchedKey] = useState('/config/app/status');
   const [isWatching, setIsWatching] = useState(false);
   const [events, setEvents] = useState<WatchEvent[]>([]);

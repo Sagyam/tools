@@ -256,9 +256,9 @@ export const LeaseCountdown: React.FC = () => {
         <Label>Keys with TTL</Label>
         <div className="max-h-60 overflow-y-auto space-y-1 p-2 bg-primary border border-primary-foreground rounded-lg">
           {Array.from(keyValues.values())
-            .filter((kv) => kv.lease)
+            .filter((kv): kv is typeof kv & { lease: string } => !!kv.lease)
             .map((kv) => {
-              const lease = leases.get(kv.lease!);
+              const lease = leases.get(kv.lease);
               const timeRemaining = lease
                 ? Math.max(0, lease.grantedAt + lease.ttl * 1000 - Date.now())
                 : 0;

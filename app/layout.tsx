@@ -47,6 +47,9 @@ export const metadata: Metadata = {
         'caching strategies',
         'dns resolver',
         'rate limiting algorithms',
+        'etcd',
+        'raft consensus',
+        'distributed systems',
     ],
     creator: 'Sagyam Thapa',
     authors: [

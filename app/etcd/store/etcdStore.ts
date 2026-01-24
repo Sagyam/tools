@@ -1,6 +1,34 @@
 import { create } from 'zustand';
 import { EtcdNode, KeyValue, Lease, WatchEvent, LogEntry, RaftMessage } from '../types';
 
+// Constants
+const DEFAULT_REPLICATION_SPEED = 1000; // milliseconds
+const DEFAULT_TERM = 1;
+const ELECTION_TIMEOUT_MS = 2000;
+const HEARTBEAT_INTERVAL_MS = 1000;
+const HEARTBEAT_TIMEOUT_MS = 5000;
+
+/**
+ * Replication speed mapping based on cluster size
+ * More nodes = faster replication to keep visualization smooth
+ */
+const REPLICATION_SPEED_MAP: Record<number, number> = {
+  3: 1200,
+  5: 1000,
+  7: 800,
+  9: 700,
+  11: 600,
+  13: 500,
+  15: 400,
+};
+
+/**
+ * Get appropriate replication speed for cluster size
+ */
+const getReplicationSpeed = (nodeCount: number): number => {
+  return REPLICATION_SPEED_MAP[nodeCount] || 1000;
+};
+
 interface EtcdStore {
   // Cluster state
   nodes: Map<string, EtcdNode>;
@@ -34,8 +62,8 @@ interface EtcdStore {
 
   // Actions - Key-Value
   put: (key: string, value: string, leaseId?: string) => void;
-  get: (key: string) => KeyValue | undefined;
-  delete: (key: string) => void;
+  getKey: (key: string) => KeyValue | undefined;
+  deleteKey: (key: string) => void;
 
   // Actions - Leases
   grantLease: (ttl: number) => string;
@@ -50,10 +78,10 @@ interface EtcdStore {
   reset: () => void;
 }
 
-const createInitialNode = (id: string, isLeader: boolean = false): EtcdNode => ({
+const createInitialNode = (id: string, isLeader = false): EtcdNode => ({
   id,
   status: isLeader ? 'leader' : 'follower',
-  term: 1,
+  term: DEFAULT_TERM,
   commitIndex: 0,
   lastHeartbeat: Date.now(),
   votesReceived: 0,
@@ -61,32 +89,50 @@ const createInitialNode = (id: string, isLeader: boolean = false): EtcdNode => (
   isPartitioned: false,
 });
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Calculate majority quorum size for Raft consensus
+ * @param totalNodes - Total number of nodes in the cluster
+ * @returns Minimum number of nodes needed for majority
+ */
+const calculateMajority = (totalNodes: number): number => Math.floor(totalNodes / 2) + 1;
 
 export const useEtcdStore = create<EtcdStore>((set, get) => ({
   nodes: new Map(),
-  currentTerm: 1,
+  currentTerm: DEFAULT_TERM,
   logs: [],
   messages: [],
   partitionedNodes: new Set(),
-  replicationSpeed: 1000, // Locked at 1000ms for consistent visualization
+  replicationSpeed: DEFAULT_REPLICATION_SPEED,
   keyValues: new Map(),
   leases: new Map(),
   watchEvents: [],
   watchers: new Map(),
 
   // Initialize cluster with specified number of nodes
-  initializeCluster: (nodeCount: number) => {
+  initializeCluster: (nodeCount: number): void => {
     const nodes = new Map<string, EtcdNode>();
     for (let i = 0; i < nodeCount; i++) {
       const id = `node-${i + 1}`;
       nodes.set(id, createInitialNode(id, i === 0));
     }
-    set({ nodes, currentTerm: 1, logs: [] });
+    const replicationSpeed = getReplicationSpeed(nodeCount);
+    set({ nodes, currentTerm: DEFAULT_TERM, logs: [], replicationSpeed });
   },
 
-  // Start election process (Raft algorithm)
-  startElection: async (nodeId: string) => {
+  /**
+   * Start election process following the Raft consensus algorithm
+   * @param nodeId - The ID of the node initiating the election
+   *
+   * Process:
+   * 1. Node becomes a candidate and increments term
+   * 2. Votes for itself
+   * 3. Sends RequestVote RPCs to all other nodes
+   * 4. Waits for responses
+   * 5. Becomes leader if it receives votes from a majority
+   */
+  startElection: async (nodeId: string): Promise<void> => {
     const nodes = new Map(get().nodes);
     const candidate = nodes.get(nodeId);
     if (!candidate || candidate.isPartitioned) return;
@@ -154,7 +200,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
 
     // Step 4: Become leader if majority
     const totalNodes = Array.from(get().nodes.values()).filter(n => !n.isPartitioned).length;
-    const majority = Math.floor(totalNodes / 2) + 1;
+    const majority = calculateMajority(totalNodes);
 
     const finalNodes = new Map(get().nodes);
     const finalCandidate = finalNodes.get(nodeId);
@@ -192,7 +238,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Simulate heartbeat from a node
-  simulateHeartbeat: (nodeId: string) => {
+  simulateHeartbeat: (nodeId: string): void => {
     const nodes = new Map(get().nodes);
     const node = nodes.get(nodeId);
     if (node) {
@@ -202,13 +248,13 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Add a log entry
-  addLogEntry: (entry: LogEntry) => {
+  addLogEntry: (entry: LogEntry): void => {
     const logs = [...get().logs, entry];
     set({ logs });
   },
 
   // Simulate log replication
-  replicateLog: (fromNodeId: string, toNodeId: string) => {
+  replicateLog: (fromNodeId: string, toNodeId: string): void => {
     const nodes = new Map(get().nodes);
     const fromNode = nodes.get(fromNodeId);
     const toNode = nodes.get(toNodeId);
@@ -220,7 +266,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Put a key-value pair
-  put: (key: string, value: string, leaseId?: string) => {
+  put: (key: string, value: string, leaseId?: string): void => {
     const keyValues = new Map(get().keyValues);
     const existing = keyValues.get(key);
     const now = Date.now();
@@ -294,12 +340,12 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Get a key-value pair
-  get: (key: string) => {
+  getKey: (key: string): KeyValue | undefined => {
     return get().keyValues.get(key);
   },
 
   // Delete a key
-  delete: (key: string) => {
+  deleteKey: (key: string): void => {
     const keyValues = new Map(get().keyValues);
     const existing = keyValues.get(key);
 
@@ -324,8 +370,15 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
     }
   },
 
-  // Grant a new lease
-  grantLease: (ttl: number) => {
+  /**
+   * Grant a new lease for time-based key expiration
+   *
+   * @param ttl - Time-to-live in seconds
+   * @returns The lease ID
+   *
+   * Keys attached to the lease will be automatically deleted when the lease expires
+   */
+  grantLease: (ttl: number): string => {
     const leaseId = `lease-${Date.now()}`;
     const lease: Lease = {
       id: leaseId,
@@ -347,7 +400,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Attach a lease to a key
-  attachLease: (key: string, leaseId: string) => {
+  attachLease: (key: string, leaseId: string): void => {
     const kv = get().keyValues.get(key);
     if (kv) {
       get().put(key, kv.value, leaseId);
@@ -355,13 +408,13 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Revoke a lease
-  revokeLease: (leaseId: string) => {
+  revokeLease: (leaseId: string): void => {
     const lease = get().leases.get(leaseId);
     if (!lease) return;
 
     // Delete all keys associated with this lease
     lease.keys.forEach(key => {
-      get().delete(key);
+      get().deleteKey(key);
     });
 
     const leases = new Map(get().leases);
@@ -369,13 +422,22 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
     set({ leases });
   },
 
-  // Watch a key for changes
-  watch: (key: string, callback: (event: WatchEvent) => void) => {
+  /**
+   * Watch a key for changes and receive real-time notifications
+   *
+   * @param key - The key to watch
+   * @param callback - Function called when the key changes
+   * @returns Unwatch function to stop watching the key
+   */
+  watch: (key: string, callback: (event: WatchEvent) => void): (() => void) => {
     const watchers = new Map(get().watchers);
     if (!watchers.has(key)) {
       watchers.set(key, new Set());
     }
-    watchers.get(key)!.add(callback);
+    const keyWatchers = watchers.get(key);
+    if (keyWatchers) {
+      keyWatchers.add(callback);
+    }
     set({ watchers });
 
     // Return unwatch function
@@ -383,7 +445,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Unwatch a key
-  unwatch: (key: string, callback: (event: WatchEvent) => void) => {
+  unwatch: (key: string, callback: (event: WatchEvent) => void): void => {
     const watchers = new Map(get().watchers);
     const keyWatchers = watchers.get(key);
     if (keyWatchers) {
@@ -396,7 +458,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Send a Raft message (for visualization)
-  sendMessage: (message: RaftMessage) => {
+  sendMessage: (message: RaftMessage): void => {
     const messages = [...get().messages, message];
     set({ messages });
 
@@ -407,13 +469,26 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Clear a message
-  clearMessage: (messageId: string) => {
+  clearMessage: (messageId: string): void => {
     const messages = get().messages.filter(m => m.id !== messageId);
     set({ messages });
   },
 
-  // Toggle network partition for a node
-  togglePartition: async (nodeId: string) => {
+  /**
+   * Toggle network partition for a node to simulate network failures
+   *
+   * @param nodeId - The ID of the node to partition or restore
+   *
+   * When partitioning:
+   * - Node is isolated from the cluster
+   * - If it's the leader, it steps down and triggers a new election
+   *
+   * When restoring:
+   * - Node rejoins the cluster
+   * - Receives all missed log entries from the current leader (catch-up)
+   * - Syncs its commit index with the leader
+   */
+  togglePartition: async (nodeId: string): Promise<void> => {
     const nodes = new Map(get().nodes);
     const partitionedNodes = new Set(get().partitionedNodes);
     const node = nodes.get(nodeId);
@@ -508,19 +583,33 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
               Math.floor(Math.random() * healthyFollowers.length)
             ];
             get().startElection(randomFollower.id);
-          }, 2000); // 2 second delay to simulate election timeout
+          }, ELECTION_TIMEOUT_MS);
         }
       }
     }
   },
 
   // Set replication speed (for visualization)
-  setReplicationSpeed: (speed: number) => {
+  setReplicationSpeed: (speed: number): void => {
     set({ replicationSpeed: speed });
   },
 
-  // Put with visible replication
-  putWithReplication: async (key: string, value: string, leaseId?: string) => {
+  /**
+   * Put a key-value pair with visible log replication across the cluster
+   * Demonstrates the Raft replication process with visual feedback
+   *
+   * @param key - The key to store
+   * @param value - The value to store
+   * @param leaseId - Optional lease ID for TTL
+   *
+   * Process:
+   * 1. Leader appends entry to its log (uncommitted)
+   * 2. Leader sends AppendEntries RPCs to all followers
+   * 3. Followers append to their logs and acknowledge
+   * 4. Once majority acknowledges, leader commits the entry
+   * 5. Entry is applied to the key-value store
+   */
+  putWithReplication: async (key: string, value: string, leaseId?: string): Promise<void> => {
     const leader = Array.from(get().nodes.values()).find(n => n.status === 'leader');
     if (!leader || leader.isPartitioned) return;
 
@@ -610,7 +699,7 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
     // Step 3: Commit once majority has replicated
     const replicatedCount = successfulReplications + 1; // Including leader
     const totalNodes = Array.from(get().nodes.values()).filter(n => !n.isPartitioned).length;
-    const majority = Math.floor(totalNodes / 2) + 1;
+    const majority = calculateMajority(totalNodes);
 
     if (replicatedCount >= majority) {
       await sleep(speed * 0.3);
@@ -701,14 +790,14 @@ export const useEtcdStore = create<EtcdStore>((set, get) => ({
   },
 
   // Reset all state
-  reset: () => {
+  reset: (): void => {
     set({
       nodes: new Map(),
-      currentTerm: 1,
+      currentTerm: DEFAULT_TERM,
       logs: [],
       messages: [],
       partitionedNodes: new Set(),
-      replicationSpeed: 1000,
+      replicationSpeed: DEFAULT_REPLICATION_SPEED,
       keyValues: new Map(),
       leases: new Map(),
       watchEvents: [],

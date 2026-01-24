@@ -35,6 +35,7 @@ const toolCategories = [
       { name: "Load Balancer", href: "/load-balancer", description: "Multi-algorithm load balancing" },
       { name: "Deployment Strategies", href: "/deployment", description: "Blue/green, canary, rolling" },
       { name: "Caching Strategies", href: "/caching", description: "Cache patterns & policies" },
+      { name: "etcd - Raft Consensus", href: "/etcd", description: "Distributed consensus visualization" },
     ]
   },
   {
@@ -65,7 +66,7 @@ export default function Home() {
             <Zap className="h-3 w-3" />
             Interactive
           </Badge>
-          <Badge variant="secondary">13+ Tools</Badge>
+          <Badge variant="secondary">14+ Tools</Badge>
           <Badge variant="secondary">TypeScript</Badge>
           <Badge variant="secondary">Next.js</Badge>
         </div>

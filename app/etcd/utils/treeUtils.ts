@@ -65,7 +65,11 @@ export function buildTreeFromKeys(keyValues: Map<string, KeyValue>): TreeNode {
  * Calculate tree layout positions using d3-hierarchy
  * Returns nodes with x, y positions for rendering
  */
-export function calculateTreeLayout(treeData: TreeNode, width: number, height: number) {
+export function calculateTreeLayout(
+  treeData: TreeNode,
+  width: number,
+  height: number
+): ReturnType<typeof hierarchy<TreeNode>> {
   // Create hierarchy
   const root = hierarchy(treeData);
 

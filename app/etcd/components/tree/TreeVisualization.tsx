@@ -47,7 +47,7 @@ interface TreeNodeData {
 }
 
 export const TreeVisualization: React.FC = () => {
-  const { keyValues, put, delete: deleteKey } = useEtcdStore();
+  const { keyValues, put, deleteKey } = useEtcdStore();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [newKey, setNewKey] = useState('');

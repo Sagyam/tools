@@ -17,7 +17,7 @@ interface LearningGuideProps {
 }
 
 export const LearningGuide: React.FC<LearningGuideProps> = ({ steps, concepts }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="bg-primary border border-sky-500/30 rounded-lg overflow-hidden">

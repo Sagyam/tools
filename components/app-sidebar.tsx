@@ -17,6 +17,7 @@ import {
     DatabaseZapIcon,
     DropletIcon,
     FilterIcon,
+    GitBranchIcon,
     NetworkIcon,
     PinIcon,
     SignpostIcon,
@@ -59,6 +60,11 @@ const items = [
         title: 'DNS Resolver',
         url: '/dns',
         icon: NetworkIcon,
+    },
+    {
+        title: 'etcd - Raft Consensus',
+        url: '/etcd',
+        icon: GitBranchIcon,
     },
     {
         title: 'HyperLogLog',
