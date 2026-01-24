@@ -1,25 +1,25 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import ReactFlow, {
     Background,
     Controls,
     Edge,
     MarkerType,
-    MiniMap,
     Node,
     ReactFlowProvider,
     useEdgesState,
     useNodesState,
+    useReactFlow,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useEtcdStore } from '../../store/etcdStore'
 import { RaftMessage } from '../../types'
 import { ClusterNode } from './ClusterNode'
 import { MessageVisualization } from './MessageVisualization'
-import { Button } from '@/components/ui/button'
 import { LearningGuide } from '../LearningGuide'
-import { HelpTooltip } from '../HelpTooltip'
+import { ClusterControls } from './ClusterControls'
+import { ClusterStatusBar } from './ClusterStatusBar'
 
 const nodeTypes = {
     clusterNode: ClusterNode,
@@ -29,20 +29,39 @@ const nodeTypes = {
 const ClusterFlow: React.FC = () => {
     const {
         nodes: etcdNodes,
-        currentTerm,
-        logs,
         messages,
         initializeCluster,
         startElection,
         simulateHeartbeat,
-        putWithReplication,
         togglePartition,
     } = useEtcdStore()
 
+    const { fitView } = useReactFlow()
     const [nodes, setNodes, onNodesChange] = useNodesState([])
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
-    const [isReplicating, setIsReplicating] = React.useState(false)
-    const [currentZoom, setCurrentZoom] = React.useState(1.0)
+    const [isMobile, setIsMobile] = React.useState(false)
+
+    // Detect mobile screen size
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Auto-fit view when nodes change (zoomed out more on mobile)
+    useEffect(() => {
+        if (nodes.length > 0) {
+            setTimeout(() => {
+                fitView({
+                    padding: isMobile ? 0.3 : 0.15,
+                    duration: 200,
+                })
+            }, 50)
+        }
+    }, [nodes, fitView, isMobile])
 
     useEffect(() => {
         if (etcdNodes.size === 0) {
@@ -66,11 +85,6 @@ const ClusterFlow: React.FC = () => {
 
     useEffect(() => {
         const nodeArray = Array.from(etcdNodes.values())
-        const nodeCount = nodeArray.length
-
-        // Set appropriate zoom level
-        const zoom = ZOOM_LEVELS[nodeCount] || 1.0
-        setCurrentZoom(zoom)
 
         // Find leader and followers
         const leader = nodeArray.find((n) => n.status === 'leader')
@@ -178,63 +192,63 @@ const ClusterFlow: React.FC = () => {
         return () => clearInterval(interval)
     }, [etcdNodes, simulateHeartbeat])
 
-    const handleAddKey = useCallback(async () => {
-        setIsReplicating(true)
-        const timestamp = Date.now()
-        await putWithReplication(
-            `/config/key-${timestamp}`,
-            `value-${timestamp}`
-        )
-        setIsReplicating(false)
-    }, [putWithReplication])
-
-    const leaderNode = useMemo(
-        () => Array.from(etcdNodes.values()).find((n) => n.status === 'leader'),
-        [etcdNodes]
-    )
-
     return (
         <>
-            <div className="w-full h-150 border border-primary-foreground rounded-lg relative">
-                <div className="absolute top-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
-                    <div className="font-semibold">Interactive Controls:</div>
-                    <div>
-                        Click "Trigger Election" on nodes to start election
+            <div className="w-full h-150 border border-border rounded-lg relative">
+                {/* Interactive Controls - Hidden on small mobile, visible on md+ */}
+                {!isMobile && (
+                    <div className="absolute top-4 left-4 z-10 bg-background/95 backdrop-blur-sm border border-border px-3 py-2 rounded-lg text-xs space-y-1 max-w-50">
+                        <div className="font-semibold text-foreground">
+                            Interactive Controls:
+                        </div>
+                        <div className="text-muted-foreground">
+                            Click "Trigger Election" on nodes to start election
+                        </div>
+                        <div className="text-muted-foreground">
+                            Click WiFi icon to partition/restore network
+                        </div>
+                        <div className="text-muted-foreground">
+                            Use "Try It" to see log replication
+                        </div>
+                        <div className="text-muted-foreground">
+                            Watch nodes turn purple during replication
+                        </div>
                     </div>
-                    <div>Click WiFi icon to partition/restore network</div>
-                    <div>Use "Add Key" to see log replication</div>
-                    <div>Watch nodes turn purple during replication</div>
-                </div>
+                )}
 
-                <div className="absolute top-4 right-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700 space-y-1">
-                    <div className="font-semibold">Legend:</div>
+                {/* Legend - Stacked on mobile */}
+                <div
+                    className={`absolute ${isMobile ? 'top-2 right-2' : 'top-4 right-4'} z-10 bg-background/95 backdrop-blur-sm border border-border px-2 py-2 rounded-lg text-xs space-y-1`}
+                >
+                    <div className="font-semibold text-foreground">Legend:</div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-sky-600 rounded"></div>
-                        <span>Leader</span>
+                        <span className="text-muted-foreground">Leader</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                        <span>Replicating</span>
+                        <span className="text-muted-foreground">
+                            Replicating
+                        </span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-amber-600 rounded"></div>
-                        <span>Candidate</span>
+                        <span className="text-muted-foreground">Candidate</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-slate-600 rounded"></div>
-                        <span>Follower</span>
+                        <span className="text-muted-foreground">Follower</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-red-800 rounded"></div>
-                        <span>Partitioned</span>
+                        <span className="text-muted-foreground">
+                            Partitioned
+                        </span>
+                    </div>
+                    <div className="border-t border-border mt-2 pt-2 text-[10px] text-muted-foreground italic">
+                        {isMobile ? 'Pinch to zoom, drag to pan' : 'Scroll to zoom, drag to pan'}
                     </div>
                 </div>
-
-                {messages.length > 0 && (
-                    <div className="absolute bottom-4 left-4 z-10 bg-slate-800/90 text-white px-3 py-2 rounded-lg text-xs border border-slate-700">
-                        Active messages: {messages.length}
-                    </div>
-                )}
 
                 <ReactFlow
                     nodes={nodes}
@@ -242,32 +256,12 @@ const ClusterFlow: React.FC = () => {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     nodeTypes={nodeTypes}
-                    defaultViewport={{ x: 0, y: 0, zoom: currentZoom }}
-                    minZoom={0.3}
+                    minZoom={0.1}
                     maxZoom={2}
                     attributionPosition="bottom-left"
                 >
                     <Background />
                     <Controls />
-                    <MiniMap
-                        nodeColor={(node) => {
-                            const nodeData = etcdNodes.get(node.id)
-                            if (!nodeData) return '#64748b'
-                            if (nodeData.isPartitioned) return '#991b1b'
-                            switch (nodeData.status) {
-                                case 'leader':
-                                    return '#0ea5e9'
-                                case 'replicating':
-                                    return '#9333ea'
-                                case 'follower':
-                                    return '#64748b'
-                                case 'candidate':
-                                    return '#f59e0b'
-                                default:
-                                    return '#64748b'
-                            }
-                        }}
-                    />
                 </ReactFlow>
 
                 {messages.map((message) => {
@@ -307,17 +301,6 @@ const LEARNING_CONCEPTS = [
     },
 ]
 
-// Zoom level mapping based on number of nodes
-const ZOOM_LEVELS: Record<number, number> = {
-    3: 1.2,
-    5: 1.0,
-    7: 0.85,
-    9: 0.75,
-    11: 0.65,
-    13: 0.6,
-    15: 0.55,
-}
-
 const LEARNING_STEPS = [
     {
         action: 'Observe the initial cluster',
@@ -350,13 +333,7 @@ const LEARNING_STEPS = [
 ]
 
 export const ClusterVisualization: React.FC = () => {
-    const {
-        currentTerm,
-        logs,
-        initializeCluster,
-        putWithReplication,
-        nodes: etcdNodes,
-    } = useEtcdStore()
+    const { putWithReplication } = useEtcdStore()
 
     const [isReplicating, setIsReplicating] = React.useState(false)
 
@@ -370,11 +347,6 @@ export const ClusterVisualization: React.FC = () => {
         setIsReplicating(false)
     }, [putWithReplication])
 
-    const leaderNode = useMemo(
-        () => Array.from(etcdNodes.values()).find((n) => n.status === 'leader'),
-        [etcdNodes]
-    )
-
     return (
         <div className="space-y-4">
             <LearningGuide
@@ -382,112 +354,12 @@ export const ClusterVisualization: React.FC = () => {
                 concepts={LEARNING_CONCEPTS}
             />
 
-            <div className="space-y-4 p-4 bg-primary border border-primary-foreground rounded-lg">
-                <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-secondary">
-                            Cluster Size:
-                        </span>
-                        {[3, 5, 7, 9, 11, 13, 15].map((count) => (
-                            <Button
-                                key={count}
-                                onClick={() => initializeCluster(count)}
-                                variant="outline"
-                                size="sm"
-                            >
-                                {count}
-                            </Button>
-                        ))}
-                        <HelpTooltip>
-                            <div className="space-y-1">
-                                <div className="font-semibold">
-                                    Cluster Size
-                                </div>
-                                <div>Raft requires odd numbers for quorum</div>
-                                <div>Larger = more fault tolerant</div>
-                                <div>
-                                    Replication speed auto-adjusts with size
-                                </div>
-                            </div>
-                        </HelpTooltip>
-                    </div>
-                </div>
+            <ClusterControls
+                onAddKey={handleAddKey}
+                isReplicating={isReplicating}
+            />
 
-                <div className="flex flex-wrap gap-2 items-center">
-                    <Button
-                        onClick={handleAddKey}
-                        className="bg-sky-600 hover:bg-sky-500"
-                        disabled={isReplicating}
-                    >
-                        {isReplicating
-                            ? 'Replicating...'
-                            : 'Add Key (Replicate)'}
-                    </Button>
-                    <HelpTooltip>
-                        <div className="space-y-1">
-                            <div className="font-semibold">Log Replication</div>
-                            <div>1. Leader appends to log</div>
-                            <div>2. Sends AppendEntries to followers</div>
-                            <div>3. Commits after majority acknowledges</div>
-                            <div>Watch the messages fly!</div>
-                        </div>
-                    </HelpTooltip>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 p-4 bg-primary border border-primary-foreground rounded-lg text-sm">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-secondary">Current Term</span>
-                        <HelpTooltip>
-                            <div className="space-y-1">
-                                <div className="font-semibold">
-                                    Election Term
-                                </div>
-                                <div>Increments with each election</div>
-                                <div>Prevents conflicts between leaders</div>
-                            </div>
-                        </HelpTooltip>
-                    </div>
-                    <div className="text-2xl font-bold">{currentTerm}</div>
-                </div>
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-secondary">Current Leader</span>
-                        <HelpTooltip>
-                            <div className="space-y-1">
-                                <div className="font-semibold">Leader Node</div>
-                                <div>Only the leader handles writes</div>
-                                <div>
-                                    Click "Trigger Election" to start election
-                                </div>
-                            </div>
-                        </HelpTooltip>
-                    </div>
-                    <div className="text-2xl font-bold text-sky-400">
-                        {leaderNode?.id || 'None'}
-                    </div>
-                </div>
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-secondary">Total Commits</span>
-                        <HelpTooltip>
-                            <div className="space-y-1">
-                                <div className="font-semibold">
-                                    Committed Entries
-                                </div>
-                                <div>
-                                    Entries that have been safely replicated
-                                </div>
-                                <div>to a majority of nodes</div>
-                            </div>
-                        </HelpTooltip>
-                    </div>
-                    <div className="text-2xl font-bold text-green-400">
-                        {logs.length}
-                    </div>
-                </div>
-            </div>
+            <ClusterStatusBar />
 
             <ReactFlowProvider>
                 <ClusterFlow />
