@@ -4,8 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dice5Icon, Grid3X3Icon, HashIcon, Tally5Icon } from 'lucide-react'
-import GearIcon from 'next/dist/client/components/react-dev-overlay/ui/icons/gear-icon'
+import {
+    CogIcon,
+    Dice5Icon,
+    Grid3X3Icon,
+    HashIcon,
+    Tally5Icon,
+} from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 interface UpdatedCell {
@@ -206,7 +211,7 @@ const CountMinSketchWorking: React.FC = () => {
             {/* Controls */}
             <Card className="bg-primary p-2 sm:p-4">
                 <CardTitle className="flex items-center gap-x-2 text-base sm:text-xl mb-4">
-                    <GearIcon />
+                    <CogIcon />
                     Controls
                 </CardTitle>
 
