@@ -6,11 +6,17 @@ interface Step {
   learn: string;
 }
 
-interface LearningGuideProps {
-  steps: Step[];
+interface Concept {
+  title: string;
+  description: string;
 }
 
-export const LearningGuide: React.FC<LearningGuideProps> = ({ steps }) => {
+interface LearningGuideProps {
+  steps: Step[];
+  concepts?: Concept[];
+}
+
+export const LearningGuide: React.FC<LearningGuideProps> = ({ steps, concepts }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -28,18 +34,37 @@ export const LearningGuide: React.FC<LearningGuideProps> = ({ steps }) => {
       </button>
 
       {isExpanded && (
-        <div className="p-4 space-y-3">
-          {steps.map((step, index) => (
-            <div key={index} className="flex gap-3">
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center font-bold">
-                {index + 1}
+        <div className="p-4 space-y-4">
+          {concepts && concepts.length > 0 && (
+            <div className="space-y-3 pb-4 border-b border-sky-500/20">
+              <div className="text-xs font-semibold text-sky-300 uppercase tracking-wide">
+                Key Concepts
               </div>
-              <div className="flex-1 space-y-1">
-                <div className="text-sm font-medium">{step.action}</div>
-                <div className="text-xs text-secondary">{step.learn}</div>
-              </div>
+              {concepts.map((concept, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="text-sm font-semibold text-slate-200">{concept.title}</div>
+                  <div className="text-xs text-secondary">{concept.description}</div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          <div className="space-y-3">
+            <div className="text-xs font-semibold text-sky-300 uppercase tracking-wide">
+              Interactive Steps
+            </div>
+            {steps.map((step, index) => (
+              <div key={index} className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center font-bold">
+                  {index + 1}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="text-sm font-medium">{step.action}</div>
+                  <div className="text-xs text-secondary">{step.learn}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

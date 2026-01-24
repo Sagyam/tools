@@ -1,6 +1,31 @@
 // Core etcd types for our educational app
 
-export type NodeStatus = 'leader' | 'follower' | 'candidate';
+export type NodeStatus = 'leader' | 'follower' | 'candidate' | 'replicating';
+
+export type MessageType = 'RequestVote' | 'VoteResponse' | 'AppendEntries' | 'AppendEntriesResponse';
+
+export interface RaftMessage {
+  id: string;
+  type: MessageType;
+  from: string;
+  to: string;
+  term: number;
+  timestamp: number;
+  // RequestVote specific
+  candidateId?: string;
+  lastLogIndex?: number;
+  lastLogTerm?: number;
+  // VoteResponse specific
+  voteGranted?: boolean;
+  // AppendEntries specific
+  entries?: LogEntry[];
+  leaderCommit?: number;
+  prevLogIndex?: number;
+  prevLogTerm?: number;
+  // AppendEntriesResponse specific
+  success?: boolean;
+  matchIndex?: number;
+}
 
 export interface EtcdNode {
   id: string;
@@ -9,6 +34,9 @@ export interface EtcdNode {
   commitIndex: number;
   lastHeartbeat: number;
   votedFor?: string;
+  votesReceived?: number;
+  log?: LogEntry[];
+  isPartitioned?: boolean;
 }
 
 export interface LogEntry {
