@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import ReactFlow, {
     Background,
     Controls,
@@ -14,7 +14,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useEtcdStore } from '../../store/etcdStore'
-import { RaftMessage } from '../../types'
+import { RaftMessage, EtcdNode as EtcdNodeType } from '../../types'
 import { ClusterNode } from './ClusterNode'
 import { MessageVisualization } from './MessageVisualization'
 import { LearningGuide } from '../LearningGuide'
@@ -23,6 +23,125 @@ import { ClusterStatusBar } from './ClusterStatusBar'
 
 const nodeTypes = {
     clusterNode: ClusterNode,
+}
+
+// Layout configuration
+const LAYOUT_CONFIG = {
+    centerX: 400,
+    centerY: 300,
+    radius: 220,
+} as const
+
+// Helper: Calculate positions for nodes in a circular layout
+const calculateNodePositions = (
+    etcdNodes: Map<string, EtcdNodeType>,
+    config = LAYOUT_CONFIG
+): Node[] => {
+    const nodeArray = Array.from(etcdNodes.values())
+    const leader = nodeArray.find((n) => n.status === 'leader')
+    const followers = nodeArray.filter((n) => n.status !== 'leader')
+    const flowNodes: Node[] = []
+
+    // Place leader in the center
+    if (leader) {
+        flowNodes.push({
+            id: leader.id,
+            type: 'clusterNode',
+            position: { x: config.centerX, y: config.centerY },
+            data: { node: leader },
+        })
+    }
+
+    // Place followers in a circle around the leader
+    followers.forEach((node, index) => {
+        const angle = (index * 2 * Math.PI) / followers.length
+        const x = config.centerX + config.radius * Math.cos(angle)
+        const y = config.centerY + config.radius * Math.sin(angle)
+
+        flowNodes.push({
+            id: node.id,
+            type: 'clusterNode',
+            position: { x, y },
+            data: { node },
+        })
+    })
+
+    return flowNodes
+}
+
+// Helper: Update node data without changing positions
+const updateNodeData = (
+    currentNodes: Node[],
+    etcdNodes: Map<string, EtcdNodeType>,
+    handlers: { onFailover: (id: string) => void; onTogglePartition: (id: string) => void }
+): Node[] => {
+    return currentNodes.map((flowNode) => {
+        const etcdNode = etcdNodes.get(flowNode.id)
+        if (!etcdNode) return flowNode
+
+        return {
+            ...flowNode,
+            data: {
+                node: etcdNode,
+                onFailover: handlers.onFailover,
+                onTogglePartition: handlers.onTogglePartition,
+            },
+        }
+    })
+}
+
+// Helper: Create replication edges from leader to followers
+const createReplicationEdges = (etcdNodes: Map<string, EtcdNodeType>): Edge[] => {
+    const leader = Array.from(etcdNodes.values()).find((n) => n.status === 'leader')
+
+    if (!leader) return []
+
+    const followers = Array.from(etcdNodes.values()).filter((n) => n.status === 'follower')
+
+    return followers.map((follower) => ({
+        id: `${leader.id}-${follower.id}`,
+        source: leader.id,
+        target: follower.id,
+        animated: true,
+        style: { stroke: '#0ea5e9', strokeWidth: 2 },
+        markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#0ea5e9',
+        },
+    }))
+}
+
+// Custom hook: Track topology changes (leader changes, node count changes)
+const useTopologyTracker = (etcdNodes: Map<string, EtcdNodeType>) => {
+    const prevLeaderIdRef = useRef<string | null>(null)
+    const prevNodeCountRef = useRef<number>(0)
+    const [topologyChangeFlag, setTopologyChangeFlag] = React.useState(0)
+
+    // Calculate current topology
+    const leader = Array.from(etcdNodes.values()).find((n) => n.status === 'leader')
+    const currentLeaderId = leader?.id || null
+    const currentNodeCount = etcdNodes.size
+
+    // Check if topology changed
+    const hasTopologyChanged =
+        currentLeaderId !== prevLeaderIdRef.current ||
+        currentNodeCount !== prevNodeCountRef.current
+
+    // Update refs in useEffect after detecting change
+    useEffect(() => {
+        if (hasTopologyChanged) {
+            prevLeaderIdRef.current = currentLeaderId
+            prevNodeCountRef.current = currentNodeCount
+            // Increment flag to force dependent effects to re-run
+            setTopologyChangeFlag((prev) => prev + 1)
+        }
+    }, [currentLeaderId, currentNodeCount, hasTopologyChanged])
+
+    return {
+        topology: { leaderId: currentLeaderId, nodeCount: currentNodeCount },
+        hasTopologyChanged,
+        topologyChangeFlag,
+    }
 }
 
 // Inner component that has access to ReactFlow context
@@ -41,6 +160,9 @@ const ClusterFlow: React.FC = () => {
     const [edges, setEdges, onEdgesChange] = useEdgesState([])
     const [isMobile, setIsMobile] = React.useState(false)
 
+    // Track topology changes (leader changes, node count changes)
+    const { hasTopologyChanged, topologyChangeFlag } = useTopologyTracker(etcdNodes)
+
     // Detect mobile screen size
     useEffect(() => {
         const checkMobile = () => {
@@ -51,24 +173,14 @@ const ClusterFlow: React.FC = () => {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    // Auto-fit view when nodes change (zoomed out more on mobile)
-    useEffect(() => {
-        if (nodes.length > 0) {
-            setTimeout(() => {
-                fitView({
-                    padding: isMobile ? 0.3 : 0.15,
-                    duration: 200,
-                })
-            }, 50)
-        }
-    }, [nodes, fitView, isMobile])
-
+    // Initialize cluster on mount
     useEffect(() => {
         if (etcdNodes.size === 0) {
             initializeCluster(5)
         }
-    }, [])
+    }, [etcdNodes.size, initializeCluster])
 
+    // Event handlers
     const handleFailover = useCallback(
         async (nodeId: string) => {
             await startElection(nodeId)
@@ -83,112 +195,84 @@ const ClusterFlow: React.FC = () => {
         [togglePartition]
     )
 
+    const handlers = useMemo(
+        () => ({ onFailover: handleFailover, onTogglePartition: handleTogglePartition }),
+        [handleFailover, handleTogglePartition]
+    )
+
+    // Update node positions and data based on topology changes
     useEffect(() => {
-        const nodeArray = Array.from(etcdNodes.values())
-
-        // Find leader and followers
-        const leader = nodeArray.find((n) => n.status === 'leader')
-        const followers = nodeArray.filter((n) => n.status !== 'leader')
-
-        const flowNodes: Node[] = []
-        const centerX = 400
-        const centerY = 300
-        const radius = 220
-
-        // Place leader in the center
-        if (leader) {
-            flowNodes.push({
-                id: leader.id,
-                type: 'clusterNode',
-                position: { x: centerX, y: centerY },
-                data: {
-                    node: leader,
-                    onFailover: handleFailover,
-                    onTogglePartition: handleTogglePartition,
-                },
-            })
+        if (nodes.length === 0) {
+            // Initial render - create nodes with positions
+            const flowNodes = calculateNodePositions(etcdNodes)
+            const nodesWithHandlers = updateNodeData(flowNodes, etcdNodes, handlers)
+            setNodes(nodesWithHandlers)
+        } else if (hasTopologyChanged) {
+            // Topology changed - recalculate positions with new layout
+            const flowNodes = calculateNodePositions(etcdNodes)
+            const nodesWithHandlers = updateNodeData(flowNodes, etcdNodes, handlers)
+            setNodes(nodesWithHandlers)
+        } else {
+            // Topology unchanged - only update node data, preserve positions
+            setNodes((currentNodes) => updateNodeData(currentNodes, etcdNodes, handlers))
         }
+    }, [etcdNodes, hasTopologyChanged, handlers, nodes.length, setNodes])
 
-        // Place followers in a circle around the leader
-        followers.forEach((node, index) => {
-            const angle = (index * 2 * Math.PI) / followers.length
-            const x = centerX + radius * Math.cos(angle)
-            const y = centerY + radius * Math.sin(angle)
-
-            flowNodes.push({
-                id: node.id,
-                type: 'clusterNode',
-                position: { x, y },
-                data: {
-                    node,
-                    onFailover: handleFailover,
-                    onTogglePartition: handleTogglePartition,
-                },
-            })
-        })
-
-        setNodes(flowNodes)
-    }, [etcdNodes, handleFailover, handleTogglePartition, setNodes])
-
+    // Auto-fit view only when topology changes
     useEffect(() => {
-        const leader = Array.from(etcdNodes.values()).find(
-            (n) => n.status === 'leader'
-        )
-        if (!leader) {
-            setEdges([])
-            return
+        if (nodes.length > 0 && topologyChangeFlag > 0) {
+            setTimeout(() => {
+                fitView({
+                    padding: isMobile ? 0.3 : 0.15,
+                    duration: 200,
+                })
+            }, 50)
         }
+    }, [topologyChangeFlag, nodes.length, fitView, isMobile])
 
-        const replicationEdges: Edge[] = Array.from(etcdNodes.values())
-            .filter((n) => n.status === 'follower')
-            .map((follower) => ({
-                id: `${leader.id}-${follower.id}`,
-                source: leader.id,
-                target: follower.id,
-                animated: true,
-                style: { stroke: '#0ea5e9', strokeWidth: 2 },
-                markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                    color: '#0ea5e9',
-                },
-            }))
-
-        setEdges(replicationEdges)
+    // Update replication edges when cluster state changes
+    useEffect(() => {
+        const edges = createReplicationEdges(etcdNodes)
+        setEdges(edges)
     }, [etcdNodes, setEdges])
 
+    // Heartbeat mechanism: leader sends periodic heartbeats to followers
     useEffect(() => {
         const leader = Array.from(etcdNodes.values()).find(
             (n) => n.status === 'leader' && !n.isPartitioned
         )
         if (!leader) return
 
-        const interval = setInterval(() => {
+        const sendHeartbeats = () => {
             // Leader sends heartbeat to itself
             simulateHeartbeat(leader.id)
 
-            // Leader sends heartbeat to all non-partitioned followers (simulating Raft heartbeat)
-            Array.from(etcdNodes.values())
-                .filter((n) => n.status === 'follower' && !n.isPartitioned)
-                .forEach((follower) => {
-                    simulateHeartbeat(follower.id)
+            // Leader sends heartbeat to all non-partitioned followers
+            const activeFollowers = Array.from(etcdNodes.values()).filter(
+                (n) => n.status === 'follower' && !n.isPartitioned
+            )
 
-                    // Optionally send visual heartbeat message (less frequently to avoid clutter)
-                    if (Math.random() < 0.1) {
-                        const heartbeat: RaftMessage = {
-                            id: `heartbeat-${Date.now()}-${Math.random()}`,
-                            type: 'AppendEntries',
-                            from: leader.id,
-                            to: follower.id,
-                            term: leader.term,
-                            entries: [],
-                            leaderCommit: leader.commitIndex,
-                            timestamp: Date.now(),
-                        }
-                        useEtcdStore.getState().sendMessage(heartbeat)
+            activeFollowers.forEach((follower) => {
+                simulateHeartbeat(follower.id)
+
+                // Occasionally send visual heartbeat message (10% chance to avoid clutter)
+                if (Math.random() < 0.1) {
+                    const heartbeat: RaftMessage = {
+                        id: `heartbeat-${Date.now()}-${Math.random()}`,
+                        type: 'AppendEntries',
+                        from: leader.id,
+                        to: follower.id,
+                        term: leader.term,
+                        entries: [],
+                        leaderCommit: leader.commitIndex,
+                        timestamp: Date.now(),
                     }
-                })
-        }, 1000)
+                    useEtcdStore.getState().sendMessage(heartbeat)
+                }
+            })
+        }
 
+        const interval = setInterval(sendHeartbeats, 1000)
         return () => clearInterval(interval)
     }, [etcdNodes, simulateHeartbeat])
 
